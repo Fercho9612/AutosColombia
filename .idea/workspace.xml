@@ -4,7 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a77565f7-61de-49d7-8a8c-eba3bbd98a39" name="Changes" comment="Base de Datos): (db): limpiar celdas huérfanas y sincronizar con tabla registro.&#10;&#10;Lógica): (service): agregar auto-liberación de celdas y corregir listarTodas.&#10;&#10;Interfaz): (ui): actualizar PanelConsultaCeldas para refrescar el mapa al asignar." />
+    <list default="true" id="a77565f7-61de-49d7-8a8c-eba3bbd98a39" name="Changes" comment="Base de Datos): (db): limpiar celdas huérfanas y sincronizar con tabla registro.&#10;&#10;Lógica): (service): agregar auto-liberación de celdas y corregir listarTodas.&#10;&#10;Interfaz): (ui): actualizar PanelConsultaCeldas para refrescar el mapa al asignar.">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -68,7 +70,7 @@
     "project.structure.last.edited": "Project",
     "project.structure.proportion": "0.0",
     "project.structure.side.proportion": "0.0",
-    "settings.editor.selected.configurable": "editor.breadcrumbs",
+    "settings.editor.selected.configurable": "project.propVCSSupport.CommitDialog",
     "vue.rearranger.settings.migration": "true"
   },
   "keyToStringList": {
@@ -103,7 +105,7 @@
       <updated>1774187113916</updated>
       <workItem from="1774187128423" duration="12451000" />
       <workItem from="1774200614221" duration="22743000" />
-      <workItem from="1774223792752" duration="2433000" />
+      <workItem from="1774223792752" duration="3092000" />
     </task>
     <task id="LOCAL-00001" summary="Base de Datos): (db): limpiar celdas huérfanas y sincronizar con tabla registro.&#10;&#10;Lógica): (service): agregar auto-liberación de celdas y corregir listarTodas.&#10;&#10;Interfaz): (ui): actualizar PanelConsultaCeldas para refrescar el mapa al asignar">
       <option name="closed" value="true" />
@@ -128,6 +130,7 @@
     <option name="version" value="3" />
   </component>
   <component name="VcsManagerConfiguration">
+    <option name="CHECK_CODE_CLEANUP_BEFORE_PROJECT_COMMIT_PROFILE" value="Project Default" />
     <MESSAGE value="Base de Datos): (db): limpiar celdas huérfanas y sincronizar con tabla registro.&#10;&#10;Lógica): (service): agregar auto-liberación de celdas y corregir listarTodas.&#10;&#10;Interfaz): (ui): actualizar PanelConsultaCeldas para refrescar el mapa al asignar" />
     <MESSAGE value="Base de Datos): (db): limpiar celdas huérfanas y sincronizar con tabla registro.&#10;&#10;Lógica): (service): agregar auto-liberación de celdas y corregir listarTodas.&#10;&#10;Interfaz): (ui): actualizar PanelConsultaCeldas para refrescar el mapa al asignar." />
     <option name="LAST_COMMIT_MESSAGE" value="Base de Datos): (db): limpiar celdas huérfanas y sincronizar con tabla registro.&#10;&#10;Lógica): (service): agregar auto-liberación de celdas y corregir listarTodas.&#10;&#10;Interfaz): (ui): actualizar PanelConsultaCeldas para refrescar el mapa al asignar." />

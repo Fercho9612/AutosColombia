@@ -1,0 +1,7 @@
+//config.properties.example,
+ //modifica a config.properties
+ //Posterior ingresa tus credenciales
+
+db.user=TU_USUARIO_AQUI
+db.password=TU_PASSWORD_AQUI
+db.url=jdbc:mysql://localhost:3306/NOMBRE_DB...

@@ -1,7 +1,11 @@
 package parqueadero.model;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
 
 /**
  * Representa a los operadores del sistema
@@ -10,38 +14,44 @@ import lombok.Data;
  * gestión de clientes
  *  * Seguridad:
  */
-@Data
-//@NoArgsConstructor
-@AllArgsConstructor
+@Data // Genera getters, setters, toString, etc.
+@NoArgsConstructor // Requerido por muchos frameworks
+@AllArgsConstructor // Genera constructor con todos los campos
+@Builder // Permite crear objetos con Usuario.builder()
 
 public class Usuario {
+    public enum Rol { vigilante, admin }
+    public enum TipoCliente { mensual, visitante }
 
-    // ── Iteración 1 ──────────────────────────────
     private int    id;
     private String nombre;
-    private String rol;           // "admin" | "vigilante"
-    private String password;      // hash SHA2-256 — nunca texto plano
-
-    // ── Iteración 2 ──────────────────────────────
+    private Rol rol;
+    private String password;
     private String  documento;
     private String  telefono;
     private String  correo;
-    private String  tipoCliente;  // "mensual" | "visitante"
+    private TipoCliente tipoCliente;
     private boolean activo;       // false = desactivado (reversible)
     private java.time.LocalDateTime fechaRegistro;
 
-    public Usuario() {
-        this.fechaRegistro = java.time.LocalDateTime.now();
+
+    // Constructor para nuevos registros (donde el cliente ELIGE)
+    public Usuario(String nombre, Rol rol, String password, TipoCliente tipo) {
+        this.nombre = nombre;
+        this.rol = rol;           // Aquí se asigna la elección manual
+        this.password = password;
+        this.tipoCliente = tipo;  // Aquí se asigna la elección manual
+        this.activo = true;       // Por defecto activo al crear
+        this.fechaRegistro = LocalDateTime.now();
     }
-    public java.time.LocalDateTime getFechaRegistro() {
+
+
+    public LocalDateTime getFechaRegistro() {
         return fechaRegistro;
     }
 
-    // 4. Setter (opcional, pero recomendado)
-    public void setFechaRegistro(java.time.LocalDateTime fechaRegistro) {
+    public void setFechaRegistro(LocalDateTime fechaRegistro) {
         this.fechaRegistro = fechaRegistro;
     }
-
-
 
 }

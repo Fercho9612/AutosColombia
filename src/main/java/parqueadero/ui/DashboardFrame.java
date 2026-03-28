@@ -2,12 +2,14 @@ package parqueadero.ui;
 
 import parqueadero.model.Usuario;
 import parqueadero.service.ParqueaderoService;
-
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 import java.awt.*;
 
+/**
+ * Ventana Principal del Sistema - Dashboard
+ * Gestiona la navegación entre todos los paneles mediante CardLayout.
+ */
 public class DashboardFrame extends JFrame {
 
     private final ParqueaderoService service;
@@ -15,259 +17,205 @@ public class DashboardFrame extends JFrame {
 
     private CardLayout cardLayout;
     private JPanel panelContenedor;
+    private JButton[] botonesMenu;
 
+    // Colores (coherentes con BasePanel)
     private final Color AZUL_PRINCIPAL = new Color(30, 110, 220);
     private final Color GRIS_MENU_FONDO = new Color(225, 225, 225);
     private final Color GRIS_BOTON_TEXTO = new Color(50, 50, 50);
-    private final Color NEGRO_TEXTO = Color.BLACK;
+    private final Color AZUL_SELECCIONADO = new Color(180, 210, 250);
     private final Color AZUL_BOTON = new Color(45, 55, 125);
 
-    private JButton[] botonesMenu;
-    private final Color AZUL_SELECCIONADO = new Color(180, 210, 250);
-
-//PANEL PRINCIPAL
     public DashboardFrame(Usuario usuario, ParqueaderoService service) {
         this.usuario = usuario;
         this.service = service;
 
-        setTitle("Autos Colombia - Dashboard");
-        setSize(1100, 750);
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setLocationRelativeTo(null);
-        setLayout(new BorderLayout());
-
-        // --- 1. HEADER ---
-        JPanel panelHeader = new JPanel(new BorderLayout());
-        panelHeader.setBackground(AZUL_PRINCIPAL);
-        panelHeader.setPreferredSize(new Dimension(0, 60));
-        panelHeader.setBorder(new EmptyBorder(0, 20, 0, 20));
-
-        JPanel panelHeaderIzquierda = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 15));
-        panelHeaderIzquierda.setOpaque(false);
-        JLabel lblIconoMenu = new JLabel("≡");
-        lblIconoMenu.setForeground(Color.WHITE);
-        lblIconoMenu.setFont(new Font("Arial", Font.BOLD, 24));
-        JLabel lblTitulo = new JLabel("Autos Colombia");
-        lblTitulo.setForeground(Color.WHITE);
-        lblTitulo.setFont(new Font("Arial", Font.BOLD, 20));
-        panelHeaderIzquierda.add(lblIconoMenu);
-        panelHeaderIzquierda.add(lblTitulo);
-
-        JPanel panelHeaderDerecha = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 15));
-        panelHeaderDerecha.setOpaque(false);
-        JLabel lblIconoUser = new JLabel("👤");
-        lblIconoUser.setForeground(Color.WHITE);
-        lblIconoUser.setFont(new Font("Arial", Font.BOLD, 20));
-        JLabel lblRol = new JLabel("Administrador");
-        lblRol.setForeground(Color.WHITE);
-        lblRol.setFont(new Font("Arial", Font.PLAIN, 16));
-        panelHeaderDerecha.add(lblIconoUser);
-        panelHeaderDerecha.add(lblRol);
-
-        panelHeader.add(panelHeaderIzquierda, BorderLayout.WEST);
-        panelHeader.add(panelHeaderDerecha, BorderLayout.EAST);
-        add(panelHeader, BorderLayout.NORTH);
-
-        // --- 2. PANEL OESTE (MENÚ) ---
-        JPanel panelOeste = new JPanel();
-        panelOeste.setLayout(new BoxLayout(panelOeste, BoxLayout.Y_AXIS));
-        panelOeste.setBackground(GRIS_MENU_FONDO);
-        panelOeste.setPreferredSize(new Dimension(220, 0));
-        panelOeste.setBorder(new EmptyBorder(20, 15, 20, 15));
-
-        JLabel lblMenuTitulo = new JLabel("Menú");
-        lblMenuTitulo.setFont(new Font("Arial", Font.BOLD, 18));
-        lblMenuTitulo.setForeground(NEGRO_TEXTO);
-        lblMenuTitulo.setAlignmentX(Component.CENTER_ALIGNMENT);
-        panelOeste.add(lblMenuTitulo);
-        panelOeste.add(Box.createRigidArea(new Dimension(0, 25)));
-
-        JButton btnUsuarios = crearBotonMenu("👤 Usuarios", true);
-        JButton btnEntradas = crearBotonMenu("≡ Entradas", false);
-        JButton btnSalidas = crearBotonMenu("⟃ Salidas", false);
-        JButton btnCeldas = crearBotonMenu("⊡ Celdas", false);
-        JButton btnPagos = crearBotonMenu("🤝 Pagos", false);
-
-        botonesMenu = new JButton[]{btnUsuarios, btnEntradas, btnSalidas, btnCeldas, btnPagos};
-
-        panelOeste.add(btnUsuarios); panelOeste.add(Box.createRigidArea(new Dimension(0, 10)));
-        panelOeste.add(btnEntradas); panelOeste.add(Box.createRigidArea(new Dimension(0, 10)));
-        panelOeste.add(btnSalidas);  panelOeste.add(Box.createRigidArea(new Dimension(0, 10)));
-        panelOeste.add(btnCeldas);   panelOeste.add(Box.createRigidArea(new Dimension(0, 10)));
-        panelOeste.add(btnPagos);
-        panelOeste.add(Box.createVerticalGlue());
-        add(panelOeste, BorderLayout.WEST);
-
-        // --- 3. CONFIGURACIÓN DEL CONTENEDOR (CardLayout) ---
-        cardLayout = new CardLayout();
-        panelContenedor = new JPanel(cardLayout);
-        add(panelContenedor, BorderLayout.CENTER);
-
-        // --- 4. DISEÑO DE REGISTRO DE USUARIOS ---
-        JPanel panelCentralRegistro = new JPanel(new BorderLayout());
-
-        panelCentralRegistro.setBackground(Color.WHITE);
-        panelCentralRegistro.setBorder(new EmptyBorder(30, 40, 30, 40));
-
-        JLabel lblRuta = new JLabel("<html><font color='gray'>👤</font> Usuarios / <font color='black'>Nuevo usuario</font></html>");
-        lblRuta.setFont(new Font("Arial", Font.PLAIN, 14));
-        panelCentralRegistro.add(lblRuta, BorderLayout.NORTH);
-
-        JPanel panelFormulario = new JPanel(new GridBagLayout());
-        panelFormulario.setBackground(Color.WHITE);
-        panelFormulario.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(new Color(200, 200, 200), 1, true),
-                new EmptyBorder(30, 40, 30, 40)
-        ));
-
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 10, 15, 10);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
-
-        JLabel lblTituloForm = new JLabel("Registrar nuevo usuario");
-        lblTituloForm.setFont(new Font("Arial", Font.BOLD, 20));
-        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
-        panelFormulario.add(lblTituloForm, gbc);
-
-        gbc.gridwidth = 1;
-        panelFormulario.add(crearLabelForm("NOMBRE COMPLETO *"), pos(0, 1, gbc));
-        panelFormulario.add(crearFieldForm(), pos(0, 2, gbc));
-        panelFormulario.add(crearLabelForm("TELÉFONO *"), pos(0, 3, gbc));
-        panelFormulario.add(crearFieldForm(), pos(0, 4, gbc));
-        panelFormulario.add(crearLabelForm("PLACA DEL VEHÍCULO *"), pos(0, 5, gbc));
-        panelFormulario.add(crearFieldForm(), pos(0, 6, gbc));
-        panelFormulario.add(crearLabelForm("TIPO DE USUARIO"), pos(0, 7, gbc));
-
-        panelFormulario.add(crearLabelForm("NÚMERO DE DOCUMENTO *"), pos(1, 1, gbc));
-        panelFormulario.add(crearFieldForm(), pos(1, 2, gbc));
-        panelFormulario.add(crearLabelForm("CORREO ELECTRÓNICO"), pos(1, 3, gbc));
-        panelFormulario.add(crearFieldForm(), pos(1, 4, gbc));
-
-        JComboBox<String> cmbTipo = new JComboBox<>(new String[]{"Seleccionar", "Mensual", "Visitante"});
-        cmbTipo.setPreferredSize(new Dimension(0, 35));
-        cmbTipo.setBackground(Color.WHITE);
-        panelFormulario.add(cmbTipo, pos(0, 8, gbc));
-
-        JPanel panelBotonesAccion = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
-        panelBotonesAccion.setOpaque(false);
-        JButton btnCancelar = new JButton("Cancelar");
-        btnCancelar.setPreferredSize(new Dimension(100, 40));
-        btnCancelar.setBackground(Color.WHITE);
-        btnCancelar.setBorder(new LineBorder(Color.GRAY, 1, true));
-
-        JButton btnRegistrar = new JButton("Registrar usuario");
-        btnRegistrar.setPreferredSize(new Dimension(180, 40));
-        btnRegistrar.setBackground(AZUL_BOTON);
-        btnRegistrar.setForeground(Color.WHITE);
-        btnRegistrar.setBorder(BorderFactory.createCompoundBorder(new LineBorder(AZUL_BOTON, 1, true), new EmptyBorder(0, 15, 0, 15)));
-
-        panelBotonesAccion.add(btnCancelar);
-        panelBotonesAccion.add(btnRegistrar);
-
-        gbc.gridx = 0; gbc.gridy = 9; gbc.gridwidth = 2;
-        panelFormulario.add(panelBotonesAccion, gbc);
-        panelCentralRegistro.add(panelFormulario, BorderLayout.CENTER);
-
-        // --- 5. REGISTRO DE PANTALLAS ---
-        panelContenedor.add(new PanelRegistro(service, cardLayout, panelContenedor), "PANTALLA_REGISTRO");
-        panelContenedor.add(new PanelEntradas(service, cardLayout, panelContenedor), "PANTALLA_ENTRADA");
-        panelContenedor.add(new PanelSalidas(service, cardLayout, panelContenedor), "PANTALLA_SALIDA");
-        panelContenedor.add(new PanelCeldas(service, cardLayout, panelContenedor), "PANTALLA_CELDAS");
-        panelContenedor.add(new PanelConsultaCeldas(service, cardLayout, panelContenedor), "PANTALLA_NUEVA_CELDA");
-        // --- 6. EVENTOS DE REDIRECCIÓN ---
-        // Inicializa el arreglo antes de los eventos
-        botonesMenu = new JButton[]{btnUsuarios, btnEntradas, btnSalidas, btnCeldas, btnPagos};
-
-        btnUsuarios.addActionListener(e -> {
-            actualizarEstadoMenu(btnUsuarios); // <--- ANEXO
-            cardLayout.show(panelContenedor, "PANTALLA_REGISTRO");
-        });
-
-        btnEntradas.addActionListener(e -> {
-            actualizarEstadoMenu(btnEntradas); // <--- ANEXO
-            cardLayout.show(panelContenedor, "PANTALLA_ENTRADA");
-        });
-
-        btnSalidas.addActionListener(e -> {
-            actualizarEstadoMenu(btnSalidas);
-            cardLayout.show(panelContenedor, "PANTALLA_SALIDA");
-        });
-
-        btnCeldas.addActionListener(e -> {
-            actualizarEstadoMenu(btnCeldas);
-            cardLayout.show(panelContenedor, "PANTALLA_CELDA");
-        });
-
-        btnPagos.addActionListener(e -> {
-            actualizarEstadoMenu(btnPagos);
-            cardLayout.show(panelContenedor, "PANTALLA_PAGOS");
-        });
-
-        btnUsuarios.addActionListener(e -> cardLayout.show(panelContenedor, "PANTALLA_REGISTRO"));
-        btnEntradas.addActionListener(e -> cardLayout.show(panelContenedor, "PANTALLA_ENTRADA"));
-        btnSalidas.addActionListener(e -> cardLayout.show(panelContenedor, "PANTALLA_SALIDA"));
-        btnCeldas.addActionListener(e -> cardLayout.show(panelContenedor, "PANTALLA_CELDAS"));
-        btnCeldas.addActionListener(e -> cardLayout.show(panelContenedor, "PANTALLA_PAGOS"));
-
-        // Botón cancelar del formulario de registro
-        btnCancelar.addActionListener(e -> cardLayout.show(panelContenedor, "PANTALLA_ENTRADA"));
+        configurarVentana();
+        inicializarComponentes();
+        registrarPantallas();
+        configurarEventos();
 
         // Vista inicial
         cardLayout.show(panelContenedor, "PANTALLA_ENTRADA");
+        actualizarEstadoMenu(botonesMenu[1]); // Entradas seleccionado por defecto
+    }
+
+    private void configurarVentana() {
+        setTitle("Autos Colombia - Dashboard");
+        setExtendedState(JFrame.MAXIMIZED_BOTH);   // Adaptable a cualquier pantalla
+        setMinimumSize(new Dimension(1100, 700));
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+        setLayout(new BorderLayout());
+    }
+
+    private void inicializarComponentes() {
+        add(crearHeader(), BorderLayout.NORTH);
+        add(crearMenuLateral(), BorderLayout.WEST);
+
+        cardLayout = new CardLayout();
+        panelContenedor = new JPanel(cardLayout);
+        add(panelContenedor, BorderLayout.CENTER);
+    }
+
+    /** Barra superior (Header) */
+    private JPanel crearHeader() {
+        JPanel header = new JPanel(new BorderLayout());
+        header.setBackground(AZUL_PRINCIPAL);
+        header.setPreferredSize(new Dimension(0, 60));
+        header.setBorder(new EmptyBorder(0, 20, 0, 20));
+
+        // Izquierda
+        JPanel izq = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 15));
+        izq.setOpaque(false);
+        JLabel icono = new JLabel("≡");
+        icono.setForeground(Color.WHITE);
+        icono.setFont(new Font("Arial", Font.BOLD, 24));
+        JLabel titulo = new JLabel("Autos Colombia");
+        titulo.setForeground(Color.WHITE);
+        titulo.setFont(new Font("Arial", Font.BOLD, 20));
+
+        izq.add(icono);
+        izq.add(titulo);
+
+        // Derecha
+        JPanel der = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 15));
+        der.setOpaque(false);
+        JLabel userIcon = new JLabel("👤");
+        userIcon.setForeground(Color.WHITE);
+        userIcon.setFont(new Font("Arial", Font.BOLD, 20));
+        JLabel rol = new JLabel("Administrador");
+        rol.setForeground(Color.WHITE);
+        rol.setFont(new Font("Arial", Font.PLAIN, 16));
+
+        der.add(userIcon);
+        der.add(rol);
+
+        header.add(izq, BorderLayout.WEST);
+        header.add(der, BorderLayout.EAST);
+        return header;
+    }
+
+    /** Menú lateral */
+    private JPanel crearMenuLateral() {
+        JPanel menu = new JPanel();
+        menu.setLayout(new BoxLayout(menu, BoxLayout.Y_AXIS));
+        menu.setBackground(GRIS_MENU_FONDO);
+        menu.setPreferredSize(new Dimension(220, 0));
+        menu.setBorder(new EmptyBorder(20, 15, 20, 15));
+
+        JLabel lblMenu = new JLabel("MENÚ");
+        lblMenu.setFont(new Font("Arial", Font.BOLD, 18));
+        lblMenu.setAlignmentX(Component.CENTER_ALIGNMENT);
+        menu.add(lblMenu);
+        menu.add(Box.createRigidArea(new Dimension(0, 25)));
+
+        // Botones del menú
+        JButton btnUsuarios = crearBotonMenu("👤 Usuarios", false);
+        JButton btnEntradas = crearBotonMenu("≡ Entradas", true);     // seleccionado por defecto
+        JButton btnSalidas  = crearBotonMenu("⟃ Salidas", false);
+        JButton btnCeldas   = crearBotonMenu("⊡ Celdas", false);
+        JButton btnGestion  = crearBotonMenu("⚙ Gestión Celda", false);  // ← Mantenido
+        JButton btnPagos    = crearBotonMenu("🤝 Pagos", false);
+
+        botonesMenu = new JButton[]{btnUsuarios, btnEntradas, btnSalidas, btnCeldas, btnGestion, btnPagos};
+
+        // Agregar botones
+        for (JButton btn : botonesMenu) {
+            menu.add(btn);
+            menu.add(Box.createRigidArea(new Dimension(0, 10)));
+        }
+
+        menu.add(Box.createVerticalGlue());
+
+        // Botón Cerrar Sesión
+        JButton btnCerrar = new JButton("Cerrar Sesión");
+        btnCerrar.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btnCerrar.setForeground(Color.RED);
+        btnCerrar.addActionListener(e -> cerrarSesion());
+        menu.add(btnCerrar);
+
+        return menu;
     }
 
     private JButton crearBotonMenu(String texto, boolean seleccionado) {
         JButton btn = new JButton(texto);
         btn.setMaximumSize(new Dimension(200, 45));
         btn.setAlignmentX(Component.CENTER_ALIGNMENT);
-        btn.setFont(new Font("Arial", seleccionado ? Font.BOLD : Font.PLAIN, 15));
         btn.setFocusPainted(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.setBorder(new EmptyBorder(10, 20, 10, 20));
+
         if (seleccionado) {
-            btn.setBackground(new Color(180, 210, 250));
+            btn.setBackground(AZUL_SELECCIONADO);
             btn.setForeground(AZUL_PRINCIPAL);
+            btn.setFont(new Font("Arial", Font.BOLD, 15));
         } else {
             btn.setBackground(GRIS_MENU_FONDO);
             btn.setForeground(GRIS_BOTON_TEXTO);
+            btn.setFont(new Font("Arial", Font.PLAIN, 15));
         }
-        btn.setBorder(new EmptyBorder(10, 20, 10, 20));
         return btn;
     }
 
-    private JLabel crearLabelForm(String texto) {
-        JLabel lbl = new JLabel(texto);
-        lbl.setFont(new Font("Arial", Font.BOLD, 12));
-        lbl.setForeground(new Color(100, 100, 100));
-        return lbl;
+    /** Registra todas las pantallas */
+    private void registrarPantallas() {
+        panelContenedor.add(new PanelRegistro(service, cardLayout, panelContenedor), "PANTALLA_REGISTRO");
+        panelContenedor.add(new PanelEntradas(service, cardLayout, panelContenedor), "PANTALLA_ENTRADA");
+        panelContenedor.add(new PanelSalidas(service, cardLayout, panelContenedor),  "PANTALLA_SALIDA");
+        panelContenedor.add(new PanelCeldas(service, cardLayout, panelContenedor),   "PANTALLA_CELDAS");
+        panelContenedor.add(new PanelConsultaCeldas(service, cardLayout, panelContenedor), "PANTALLA_GESTION_CELDAS");
+        panelContenedor.add(new PanelPagos(service, cardLayout, panelContenedor), "PANTALLA_PAGOS");
+
+       }
+
+    /** Configura eventos de navegación */
+    private void configurarEventos() {
+        JButton btnUsuarios = botonesMenu[0];
+        JButton btnEntradas = botonesMenu[1];
+        JButton btnSalidas  = botonesMenu[2];
+        JButton btnCeldas   = botonesMenu[3];
+        JButton btnGestion  = botonesMenu[4];
+        JButton btnPagos    = botonesMenu[5];
+
+        btnUsuarios.addActionListener(e -> navegar("PANTALLA_REGISTRO", btnUsuarios));
+        btnEntradas.addActionListener(e -> navegar("PANTALLA_ENTRADA", btnEntradas));
+        btnSalidas.addActionListener(e -> navegar("PANTALLA_SALIDA", btnSalidas));
+        btnCeldas.addActionListener(e -> navegar("PANTALLA_CELDAS", btnCeldas));
+        btnGestion.addActionListener(e -> navegar("PANTALLA_GESTION_CELDAS", btnGestion));
+        btnPagos.addActionListener(e -> navegar("PANTALLA_PAGOS", btnPagos));
     }
 
-    private JTextField crearFieldForm() {
-        JTextField txt = new JTextField();
-        txt.setPreferredSize(new Dimension(0, 35));
-        txt.setBorder(BorderFactory.createCompoundBorder(new LineBorder(new Color(200, 200, 200), 1, true), new EmptyBorder(5, 10, 5, 10)));
-        return txt;
-    }
-
-    private GridBagConstraints pos(int x, int y, GridBagConstraints gbc) {
-        gbc.gridx = x; gbc.gridy = y; return gbc;
+    private void navegar(String pantalla, JButton botonActivo) {
+        actualizarEstadoMenu(botonActivo);
+        cardLayout.show(panelContenedor, pantalla);
     }
 
     public void actualizarEstadoMenu(JButton botonActivo) {
         for (JButton btn : botonesMenu) {
             if (btn == botonActivo) {
                 btn.setBackground(AZUL_SELECCIONADO);
-                btn.setFont(new Font("Arial", Font.BOLD, 15));
                 btn.setForeground(AZUL_PRINCIPAL);
+                btn.setFont(new Font("Arial", Font.BOLD, 15));
                 btn.setOpaque(true);
             } else {
                 btn.setBackground(GRIS_MENU_FONDO);
-                btn.setFont(new Font("Arial", Font.PLAIN, 15));
                 btn.setForeground(GRIS_BOTON_TEXTO);
+                btn.setFont(new Font("Arial", Font.PLAIN, 15));
                 btn.setOpaque(false);
             }
         }
-        // Forzar a la interfaz a repintarse
-        this.repaint();
+        repaint();
+    }
+
+    private void cerrarSesion() {
+        int opcion = JOptionPane.showConfirmDialog(this,
+                "¿Desea cerrar sesión?", "Confirmar",
+                JOptionPane.YES_NO_OPTION);
+
+        if (opcion == JOptionPane.YES_OPTION) {
+            dispose();
+            new LoginFrame().setVisible(true);
+        }
     }
 }

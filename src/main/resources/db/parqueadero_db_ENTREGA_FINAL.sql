@@ -37,7 +37,7 @@ CREATE TABLE usuario (
     telefono       VARCHAR(15)  NULL,
     correo         VARCHAR(100) NULL,
     tipo_cliente   ENUM('mensual','visitante') NULL DEFAULT NULL
-                   COMMENT 'NULL para admin/vigilante',
+                   COMMENT 'NULL para Mensual/visitante',
     activo         BOOLEAN      NOT NULL DEFAULT TRUE
                    COMMENT 'RF13 — FALSE=desactivado (reversible)',
 
@@ -145,6 +145,9 @@ WHERE r.hora_salida IS NULL;
 -- Sin documento (cuenta técnica, no cliente)
 INSERT INTO usuario (nombre, rol, password)
 VALUES ('admin', 'admin', SHA2('Admin_2026', 256));
+SELECT * FROM usuario 
+WHERE activo = TRUE 
+AND rol != 'admin'; -- Esto oculta al admin de la lista
 
 -- ── 20 celdas disponibles ────────────────────
 -- 10 CARRO + 10 MOTO
@@ -159,19 +162,82 @@ INSERT INTO celda (tipo, disponible) VALUES
     ('MOTO', TRUE),('MOTO', TRUE),('MOTO', TRUE),
     ('MOTO', TRUE);
 
+
+-- ==============================
+-- ── 1. Usuarios Clientes ──────────────────────
+-- Se insertan con su respectivo tipo_cliente (RF14)
+INSERT INTO usuario (nombre, documento, telefono, correo, tipo_cliente, password) 
+VALUES 
+-- Clientes de Carros (5)
+('Juan Perez', '10102020', '3001112233', 'juan@mail.com', 'mensual', SHA2('pass123', 256)),
+('Maria Lopez', '20203030', '3104445566', 'maria@mail.com', 'visitante', SHA2('pass123', 256)),
+('Carlos Ruiz', '40405050', '3207778899', 'carlos@mail.com', 'mensual', SHA2('pass123', 256)),
+('Ana Gomez', '50506060', '3151234567', 'ana@mail.com', 'visitante', SHA2('pass123', 256)),
+('Luis Castro', '70708080', '3019876543', 'luis@mail.com', 'mensual', SHA2('pass123', 256)),
+-- Clientes de Motos (3)
+('Pedro Marmol', '80809090', '3000001111', 'pedro@mail.com', 'visitante', SHA2('pass123', 256)),
+('Sara Villa', '90901111', '3122223333', 'sara@mail.com', 'mensual', SHA2('pass123', 256)),
+('Ramiro Paz', '12121313', '3189998877', 'ramiro@mail.com', 'visitante', SHA2('pass123', 256));
+
+-- ── 2. Vehículos ──────────────────────────────
+INSERT INTO vehiculo (placa, tipo) 
+VALUES 
+('ABC123', 'CARRO'), ('DEF456', 'CARRO'), ('GHI789', 'CARRO'), ('JKL012', 'CARRO'), ('MNO345', 'CARRO'),
+('XYZ78C', 'MOTO'), ('QWE12D', 'MOTO'), ('ASD45E', 'MOTO');
+
+-- ── 3. Registros de Entrada (Activos) ─────────
+-- Vinculamos la placa con la celda y el usuario correspondiente
+-- Carros ocupan celdas 1 a 5
+INSERT INTO registro (placa_vehiculo, id_celda, id_usuario, hora_entrada) VALUES 
+('ABC123', 1, 2, DATE_SUB(NOW(), INTERVAL 2 HOUR)),
+('DEF456', 2, 3, DATE_SUB(NOW(), INTERVAL 1 HOUR)),
+('GHI789', 3, 4, DATE_SUB(NOW(), INTERVAL 30 MINUTE)),
+('JKL012', 4, 5, DATE_SUB(NOW(), INTERVAL 5 HOUR)),
+('MNO345', 5, 6, DATE_SUB(NOW(), INTERVAL 15 MINUTE));
+
+-- Motos ocupan celdas 11 a 13
+INSERT INTO registro (placa_vehiculo, id_celda, id_usuario, hora_entrada) VALUES 
+('XYZ78C', 11, 7, DATE_SUB(NOW(), INTERVAL 3 HOUR)),
+('QWE12D', 12, 8, DATE_SUB(NOW(), INTERVAL 45 MINUTE)),
+('ASD45E', 13, 9, DATE_SUB(NOW(), INTERVAL 10 MINUTE));
+
+-- ── 4. Sincronización de Celdas ────────────────
+-- Marcamos como ocupadas para que Java no las asigne de nuevo
+UPDATE celda SET disponible = FALSE WHERE id IN (1, 2, 3, 4, 5, 11, 12, 13);
+
 -- ════════════════════════════════════════════
 -- VERIFICACIÓN FINAL
 -- Todos deben retornar datos correctos
 -- ════════════════════════════════════════════
 
 -- Admin creado correctamente
-SELECT id, nombre, rol
+SELECT id, nombre, tipo_cliente
 FROM   usuario;
 
 -- 20 celdas listas (10 CARRO + 10 MOTO)
 SELECT tipo, COUNT(*) AS total
 FROM   celda
 GROUP  BY tipo;
+
+-- ====================================ERRORES Y EJECUCIONES NUEVAS
+SET SQL_SAFE_UPDATES = 0;
+UPDATE usuario SET tipo_cliente = 'visitante' WHERE tipo_cliente IS NULL;
+SET SQL_SAFE_UPDATES = 1;
+-- DELETE FROM registro WHERE id_usuario >= 23;
+-- DELETE FROM usuario WHERE id >= 23;
+UPDATE usuario SET tipo_cliente = 'visitante' 
+WHERE tipo_cliente IS NULL OR tipo_cliente = '' OR tipo_cliente = ' ';
+ALTER TABLE usuario MODIFY COLUMN tipo_cliente VARCHAR(50) NOT NULL;
+SHOW TABLES;
+
+
+
+SELECT u.nombre, COUNT(r.id) as total_celdas
+FROM usuario u
+JOIN registro r ON u.id = r.id_usuario
+WHERE r.hora_salida IS NULL
+GROUP BY u.id, u.nombre
+HAVING COUNT(r.id) > 1;
 
 -- Estructura lista para Java
 SELECT 'BD lista para la app Java' AS estado;

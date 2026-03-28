@@ -6,7 +6,8 @@ import javax.swing.*;
 
 /**
  * Punto de entrada principal de la aplicación Parqueadero Autos Colombia.
- * Inicia la interfaz gráfica mostrando la pantalla de acceso (Login).
+ * Inicia la interfaz gráfica
+ * mostrando la pantalla de acceso (Login).
  * * @author Ferney Rodrigo Marin Pai (y equipo)
  */ 
 

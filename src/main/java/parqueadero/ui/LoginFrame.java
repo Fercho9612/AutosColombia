@@ -8,295 +8,175 @@ import java.awt.*;
 
 /**
  * Pantalla de inicio de sesión del sistema.
-  * Funcionalidades:
- *   - Autenticación con usuario y contraseña
- *   - Restaurar contraseña mediante documento
- *
- * @author Ferney Rodrigo Marin Pai (y equipo)
- * @version 2.0
  */
 public class LoginFrame extends JFrame {
 
-    // ── Service de negocio ───────────────────────
     private final ParqueaderoService service = new ParqueaderoService();
-
-    // ── Componentes del formulario ───────────────
-    private JTextField     txtUsuario;
+    private JTextField txtUsuario;
     private JPasswordField txtPassword;
 
-    /**
-     * Constructor — construye y configura la ventana de login.
-     */
     public LoginFrame() {
         setTitle("Inicio de Sesión - Parqueadero Autos Colombia");
 
-        // Tamaño relativo al monitor del usuario
-        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        setSize(screenSize.width / 2, screenSize.height / 2);
-        setMinimumSize(new Dimension(600, 400));
+        // Configuración de tamaño y posición
+        setSize(800, 500);
+        setMinimumSize(new Dimension(700, 450));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
         // Panel con imagen de fondo
-        BackgroundPanel panel = new BackgroundPanel();
-        panel.setLayout(new GridBagLayout());
+        BackgroundPanel panelPrincipal = new BackgroundPanel();
+        panelPrincipal.setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
 
-        // ── Título ───────────────────────────────
-        gbc.gridx    = 0;
-        gbc.gridy    = 0;
+        // --- TÍTULO ---
+        gbc.gridx = 0;
+        gbc.gridy = 0;
         gbc.gridwidth = 2;
-        gbc.weighty  = 0.3;
-        gbc.anchor   = GridBagConstraints.CENTER;
-
-        JLabel lblTitulo = new JLabel("Inicio de sesión");
-        lblTitulo.setFont(new Font("Arial", Font.BOLD, 32));
+        gbc.weighty = 0.2;
+        gbc.anchor = GridBagConstraints.CENTER;
+        JLabel lblTitulo = new JLabel("SISTEMA DE PARQUEADERO");
+        lblTitulo.setFont(new Font("Arial", Font.BOLD, 28));
         lblTitulo.setForeground(Color.WHITE);
-        panel.add(lblTitulo, gbc);
+        panelPrincipal.add(lblTitulo, gbc);
 
-        // ── Espaciador izquierdo (arte del fondo) ─
-        gbc.gridx    = 0;
-        gbc.gridy    = 1;
-        gbc.gridwidth = 1;
-        gbc.weightx  = 0.6;
-        gbc.weighty  = 0.7;
-        panel.add(new Box.Filler(
-                new Dimension(0,0),
-                new Dimension(0,0),
-                new Dimension(1000,1000)), gbc);
-
-        // ── Formulario (derecha) ─────────────────
-        // GridLayout: 7 filas para incluir botón olvidé contraseña
-        JPanel formGroup = new JPanel(new GridLayout(7, 1, 0, 8));
+        // --- FORMULARIO (Lado Derecho) ---
+        JPanel formGroup = new JPanel(new GridLayout(0, 1, 0, 10));
         formGroup.setOpaque(false);
+        formGroup.setPreferredSize(new Dimension(250, 300));
 
-        // Etiqueta y campo usuario
-        JLabel lblUsuario = new JLabel("Usuario:");
-        lblUsuario.setForeground(Color.WHITE);
-        lblUsuario.setFont(new Font("Arial", Font.BOLD, 14));
-        txtUsuario = new JTextField(15);
+        JLabel lblUser = new JLabel("Usuario:");
+        lblUser.setForeground(Color.WHITE);
+        lblUser.setFont(new Font("Arial", Font.BOLD, 14));
+        txtUsuario = new JTextField();
+        txtUsuario.setPreferredSize(new Dimension(200, 35));
 
-        // Etiqueta y campo contraseña
-        JLabel lblPassword = new JLabel("Contraseña:");
-        lblPassword.setForeground(Color.WHITE);
-        lblPassword.setFont(new Font("Arial", Font.BOLD, 14));
-        txtPassword = new JPasswordField(15);
+        JLabel lblPass = new JLabel("Contraseña:");
+        lblPass.setForeground(Color.WHITE);
+        lblPass.setFont(new Font("Arial", Font.BOLD, 14));
+        txtPassword = new JPasswordField();
+        txtPassword.setPreferredSize(new Dimension(200, 35));
 
-        // Botón ingresar
-        JButton btnLogin = new JButton("Ingresar");
-        btnLogin.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        JButton btnLogin = new JButton("INGRESAR");
         btnLogin.setBackground(new Color(30, 100, 200));
         btnLogin.setForeground(Color.WHITE);
         btnLogin.setFont(new Font("Arial", Font.BOLD, 13));
+        btnLogin.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // Botón olvidé contraseña
-        JButton btnOlvide = new JButton("¿Olvidé mi contraseña?");
-        btnOlvide.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnOlvide.setOpaque(false);
+        JButton btnOlvide = new JButton("¿Olvidó su contraseña?");
+        btnOlvide.setForeground(new Color(173, 216, 230));
         btnOlvide.setContentAreaFilled(false);
         btnOlvide.setBorderPainted(false);
-        btnOlvide.setForeground(new Color(173, 216, 230)); // azul claro
-        btnOlvide.setFont(new Font("Arial", Font.PLAIN, 12));
+        btnOlvide.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // Agregar componentes al formulario
-        formGroup.add(lblUsuario);
+        formGroup.add(lblUser);
         formGroup.add(txtUsuario);
-        formGroup.add(lblPassword);
+        formGroup.add(lblPass);
         formGroup.add(txtPassword);
+        formGroup.add(Box.createVerticalStrut(10));
         formGroup.add(btnLogin);
-        formGroup.add(new JLabel()); // separador visual
         formGroup.add(btnOlvide);
 
-        // Posicionar formulario en el panel
-        gbc.gridx    = 1;
-        gbc.gridy    = 1;
-        gbc.weightx  = 0.4;
-        gbc.anchor   = GridBagConstraints.NORTHWEST;
-        gbc.insets   = new Insets(20, 20, 20, 80);
-        panel.add(formGroup, gbc);
+        gbc.gridx = 1;
+        gbc.gridy = 1;
+        gbc.gridwidth = 1;
+        gbc.weightx = 0.5;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(0, 0, 0, 50);
+        panelPrincipal.add(formGroup, gbc);
 
-        // ── Acción: Ingresar ─────────────────────
+        // --- ACCIONES ---
         btnLogin.addActionListener(e -> accionLogin());
-
-        // Permite presionar Enter para ingresar
-        txtPassword.addActionListener(e -> accionLogin());
-
-        // ── Acción: Olvidé contraseña ────────────
+        txtPassword.addActionListener(e -> accionLogin()); // Enter en password
         btnOlvide.addActionListener(e -> accionOlvidePassword());
 
-        add(panel);
+        add(panelPrincipal);
+
+        // Foco inicial en usuario
+        SwingUtilities.invokeLater(() -> txtUsuario.requestFocusInWindow());
     }
 
-    // ═══════════════════════════════════════════════
-    // ACCIONES PRIVADAS
-    // ═══════════════════════════════════════════════
-
-    /**
-     * Valida credenciales y abre el Dashboard si son correctas.
-      */
     private void accionLogin() {
-        String nombre   = txtUsuario.getText().trim();
-        String password = new String(txtPassword.getPassword()).trim();
+        String user = txtUsuario.getText().trim();
+        String pass = new String(txtPassword.getPassword()).trim();
 
-        // Validar campos vacíos
-        if (nombre.isEmpty() || password.isEmpty()) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Por favor ingrese usuario y contraseña.",
-                    "Campos vacíos",
-                    JOptionPane.WARNING_MESSAGE);
+        if (user.isEmpty() || pass.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Complete todos los campos.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         try {
-            Usuario usuario = service.login(nombre, password);
-
-            if (usuario != null) {
-                // Login exitoso — abrir Dashboard
-                dispose();
-                new DashboardFrame(usuario, service).setVisible(true);
+            Usuario u = service.login(user, pass);
+            if (u != null) {
+                this.dispose();
+                // Asegúrate que DashboardFrame reciba (Usuario, ParqueaderoService)
+                new DashboardFrame(u, service).setVisible(true);
             } else {
-                // Credenciales incorrectas
-                JOptionPane.showMessageDialog(
-                        this,
-                        "Usuario o contraseña incorrectos.",
-                        "Acceso denegado",
-                        JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Credenciales incorrectas.", "Error", JOptionPane.ERROR_MESSAGE);
                 txtPassword.setText("");
-                txtPassword.requestFocus();
             }
-
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Error de conexión: " + ex.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error de conexión: " + ex.getMessage());
         }
     }
 
-    /**
-     * Flujo para restaurar contraseña.
-     * Verifica identidad con nombre + documento
-     * Pasos:
-     *   1. Solicita nombre de usuario
-     *   2. Solicita número de documento (segundo factor)
-     *   3. Solicita nueva contraseña (con confirmación)
-     *   4. Llama al service para actualizar
-     */
     private void accionOlvidePassword() {
+        String nombre = JOptionPane.showInputDialog(this, "Ingrese su nombre de usuario:");
+        if (nombre == null || nombre.isEmpty()) return;
 
-        // ── Paso 1: nombre de usuario ────────────
-        String nombre = JOptionPane.showInputDialog(
-                this,
-                "Ingrese su nombre de usuario:",
-                "Restaurar contraseña — Paso 1",
-                JOptionPane.QUESTION_MESSAGE);
+        String documento = JOptionPane.showInputDialog(this, "Ingrese su número de documento:");
+        if (documento == null || documento.isEmpty()) return;
 
-        if (nombre == null || nombre.trim().isEmpty()) return;
+        // Panel de cambio de clave
+        JPasswordField p1 = new JPasswordField();
+        JPasswordField p2 = new JPasswordField();
+        Object[] message = { "Nueva Contraseña:", p1, "Confirme Contraseña:", p2 };
 
-        // ── Paso 2: documento (verificación) ────
-        String documento = JOptionPane.showInputDialog(
-                this,
-                "Ingrese su número de documento:",
-                "Restaurar contraseña — Paso 2",
-                JOptionPane.QUESTION_MESSAGE);
+        int option = JOptionPane.showConfirmDialog(this, message, "Restablecer Clave", JOptionPane.OK_CANCEL_OPTION);
 
-        if (documento == null || documento.trim().isEmpty()) return;
+        if (option == JOptionPane.OK_OPTION) {
+            String pass1 = new String(p1.getPassword());
+            String pass2 = new String(p2.getPassword());
 
-        // ── Paso 3: nueva contraseña ─────────────
-        JPasswordField txtNueva    = new JPasswordField(15);
-        JPasswordField txtConfirma = new JPasswordField(15);
-
-        JPanel panelPass = new JPanel(new GridLayout(4, 1, 0, 6));
-        panelPass.add(new JLabel("Nueva contraseña:"));
-        panelPass.add(txtNueva);
-        panelPass.add(new JLabel("Confirmar contraseña:"));
-        panelPass.add(txtConfirma);
-
-        int opcion = JOptionPane.showConfirmDialog(
-                this,
-                panelPass,
-                "Restaurar contraseña — Paso 3",
-                JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.PLAIN_MESSAGE);
-
-        if (opcion != JOptionPane.OK_OPTION) return;
-
-        String nuevaPass    = new String(txtNueva.getPassword()).trim();
-        String confirmaPass = new String(txtConfirma.getPassword()).trim();
-
-        // Validar que las contraseñas coinciden
-        if (nuevaPass.isEmpty()) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "La contraseña no puede estar vacía.",
-                    "Error",
-                    JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        if (!nuevaPass.equals(confirmaPass)) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Las contraseñas no coinciden.",
-                    "Error",
-                    JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        // ── Paso 4: actualizar en BD ─────────────
-        try {
-            service.restaurarPassword(
-                    nombre.trim(),
-                    documento.trim(),
-                    nuevaPass);
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Contraseña actualizada correctamente.\n" +
-                            "Ya puede iniciar sesión con su nueva contraseña.",
-                    "Éxito",
-                    JOptionPane.INFORMATION_MESSAGE);
-
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    ex.getMessage(),
-                    "No se pudo restaurar",
-                    JOptionPane.ERROR_MESSAGE);
+            if (pass1.equals(pass2) && !pass1.isEmpty()) {
+                try {
+                    service.restaurarPassword(nombre, documento, pass1);
+                    JOptionPane.showMessageDialog(this, "Contraseña actualizada con éxito.");
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage());
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Las contraseñas no coinciden o están vacías.");
+            }
         }
     }
 
-    // ═══════════════════════════════════════════════
-    // PANEL CON IMAGEN DE FONDO
-    // ═══════════════════════════════════════════════
-
-    /**
-     * Panel personalizado que escala la imagen de fondo
-     * dinámicamente al tamaño actual de la ventana.
-     */
+    // PANEL PERSONALIZADO PARA EL FONDO
     private static class BackgroundPanel extends JPanel {
-
-        private Image background;
+        private Image img;
 
         public BackgroundPanel() {
             try {
-                background = new ImageIcon(
-                        getClass().getResource("/images/background.jpg")
-                ).getImage();
+                // Intenta cargar la imagen
+                java.net.URL imgURL = getClass().getResource("/images/background.jpg");
+                if (imgURL != null) {
+                    img = new ImageIcon(imgURL).getImage();
+                }
             } catch (Exception e) {
-                // Sin imagen — fondo negro por defecto
+                img = null;
             }
         }
 
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
-            if (background != null) {
-                // Escala la imagen al tamaño actual del panel
-                g.drawImage(background, 0, 0,
-                        getWidth(), getHeight(), this);
+            if (img != null) {
+                g.drawImage(img, 0, 0, getWidth(), getHeight(), this);
+            } else {
+                // Si no hay imagen, un degradado o color oscuro profesional
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setPaint(new GradientPaint(0, 0, new Color(20, 30, 48), 0, getHeight(), new Color(36, 59, 85)));
+                g2d.fillRect(0, 0, getWidth(), getHeight());
             }
         }
     }

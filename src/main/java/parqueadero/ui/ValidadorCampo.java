@@ -5,27 +5,19 @@ import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DocumentFilter;
 import java.awt.*;
+import java.awt.event.MouseEvent;
 
 /**
- * Filtro personalizado para restringir la entrada de datos en campos de texto.
- * Permite controlar el límite de caracteres, forzar mayúsculas y filtrar
- * números o puntos en tiempo real.
+ * Filtro avanzado para JTextField.
+ * Controla longitud, tipo de dato (numérico/decimal) y formato (MAYÚSCULAS).
  */
 public class ValidadorCampo extends DocumentFilter {
     private final int limite;
     private final boolean soloNumeros;
     private final boolean aMayusculas;
-    private final boolean permitirPunto; // <--- NUEVO
-    private final JTextField campoAsociado; // Para mostrar el mensaje de error
+    private final boolean permitirPunto;
+    private final JTextField campoAsociado;
 
-    /**
-     * Configura las reglas de validación para un campo específico.
-     * @param limite Máximo de caracteres permitidos.
-     * @param soloNumeros Si es true, solo acepta dígitos.
-     * @param aMayusculas Si es true, convierte el texto a mayúsculas automáticamente.
-     * @param permitirPunto Si es true, permite el carácter '.' junto a los números.
-     * @param campoAsociado El JTextField al que se aplica para mostrar alertas visuales.
-     */
     public ValidadorCampo(int limite, boolean soloNumeros, boolean aMayusculas, boolean permitirPunto, JTextField campoAsociado) {
         this.limite = limite;
         this.soloNumeros = soloNumeros;
@@ -34,64 +26,70 @@ public class ValidadorCampo extends DocumentFilter {
         this.campoAsociado = campoAsociado;
     }
 
-    /**
-     * Procesa y filtra el texto antes de que se inserte en el documento.
-     * Aplica las reglas de formato y muestra avisos si se intenta ingresar caracteres inválidos.
-     */
     @Override
     public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs)
             throws BadLocationException {
 
         if (text == null) return;
 
-        String originalText = text;
+        // 1. Transformación a Mayúsculas
+        if (aMayusculas) {
+            text = text.toUpperCase();
+        }
 
-        // 1. Manejo de Mayúsculas
-        if (aMayusculas) text = text.toUpperCase();
-
-        // 2. Manejo de Números y Puntos
+        // 2. Filtrado de Caracteres Prohibidos
+        String filtrado = text;
         if (soloNumeros) {
             if (permitirPunto) {
-                // Permite números (0-9) y el punto (.)
-                text = text.replaceAll("[^0-9.]", "");
+                filtrado = text.replaceAll("[^0-9.]", "");
             } else {
-                // Solo números
-                text = text.replaceAll("[^0-9]", "");
+                filtrado = text.replaceAll("[^0-9]", "");
             }
 
-            // SI EL TEXTO CAMBIÓ, significa que el usuario intentó meter algo prohibido
-            if (!text.equals(originalText)) {
-                mostrarAviso();
+            // Si el texto cambió tras el filtro, avisamos al usuario
+            if (!filtrado.equals(text)) {
+                mostrarAviso("Solo se permiten números" + (permitirPunto ? " y puntos." : "."));
             }
         }
 
-        // 3. Manejo de Límite
-        int total = fb.getDocument().getLength() + text.length() - length;
-        if (total <= limite) {
-            super.replace(fb, offset, length, text, attrs);
+        // 3. Verificación de Límite de Longitud
+        int longitudActual = fb.getDocument().getLength();
+        int longitudNueva = longitudActual - length + filtrado.length();
+
+        if (longitudNueva <= limite) {
+            super.replace(fb, offset, length, filtrado, attrs);
         } else {
+            // Si el texto es muy largo (ej. al pegar), cortamos lo que quepa
+            int espacioDisponible = limite - (longitudActual - length);
+            if (espacioDisponible > 0) {
+                String textoCortado = filtrado.substring(0, espacioDisponible);
+                super.replace(fb, offset, length, textoCortado, attrs);
+            }
             mostrarAvisoLimite();
         }
     }
-    /**
-     * Muestra un ToolTip informativo cuando el usuario ingresa caracteres no permitidos.
-     */
-    private void mostrarAviso() {
+
+    private void mostrarAviso(String mensaje) {
         if (campoAsociado != null) {
-            campoAsociado.setToolTipText("Solo se permiten números" + (permitirPunto ? " y puntos." : "."));
-            // Mostrar el tooltip inmediatamente
-            ToolTipManager.sharedInstance().mouseMoved(
-                    new java.awt.event.MouseEvent(campoAsociado, 0, 0, 0, 0, 0, 0, false)
-            );
+            campoAsociado.setToolTipText(mensaje);
+            // Truco para forzar la aparición del ToolTip
+            MouseEvent me = new MouseEvent(campoAsociado, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0, 0, 0, 0, false);
+            ToolTipManager.sharedInstance().mouseMoved(me);
         }
     }
-    /**
-     * Notifica mediante un sonido y ToolTip cuando se alcanza el máximo de caracteres.
-     */
+
     private void mostrarAvisoLimite() {
         if (campoAsociado != null) {
-            campoAsociado.setToolTipText("Límite de " + limite + " caracteres alcanzado.");
             Toolkit.getDefaultToolkit().beep();
+            campoAsociado.setToolTipText("Máximo " + limite + " caracteres.");
         }
+    }
+
+    /**
+     * Método de utilidad para aplicar este validador a un campo fácilmente.
+     */
+    public static void aplicar(JTextField campo, int limite, boolean soloNum, boolean mayus, boolean punto) {
+        ((javax.swing.text.AbstractDocument) campo.getDocument())
+                .setDocumentFilter(new ValidadorCampo(limite, soloNum, mayus, punto, campo));
     }
 }

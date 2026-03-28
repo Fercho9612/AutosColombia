@@ -93,13 +93,12 @@ public class UsuarioDAO {
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString   (1, u.getNombre());
-            ps.setString   (2, u.getRol());
+            ps.setString   (2, String.valueOf(u.getRol()));
             ps.setString   (3, u.getPassword());
             ps.setString   (4, u.getDocumento());
             ps.setString   (5, u.getTelefono());
             ps.setString   (6, u.getCorreo());
-            ps.setString   (7, u.getTipoCliente().toLowerCase());
-            // posición 8 = fecha_registro
+            ps.setString   (7, String.valueOf(u.getTipoCliente()));
             ps.setTimestamp(8, u.getFechaRegistro() != null
                     ? Timestamp.valueOf(u.getFechaRegistro())
                     : Timestamp.valueOf(java.time.LocalDateTime.now()));
@@ -197,7 +196,7 @@ public class UsuarioDAO {
     public String buscarPlacaPorUsuario(int idUsuario)
             throws SQLException {
         String sql = "SELECT placa_vehiculo FROM registro " +
-                "WHERE id_usuario = ? " +
+                "WHERE id_usuario_entrada = ? " +
                 "ORDER BY hora_entrada DESC LIMIT 1";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -208,43 +207,28 @@ public class UsuarioDAO {
         return null;
     }
 
-    // ═══════════════════════════════════════════════
-
-    private Usuario mapear(ResultSet rs) throws SQLException {
-        Usuario u = new Usuario();
-        u.setId          (rs.getInt    ("id"));
-        u.setNombre      (rs.getString ("nombre"));
-        u.setRol         (rs.getString ("rol"));
-        u.setDocumento   (rs.getString ("documento"));
-        u.setTelefono    (rs.getString ("telefono"));
-        u.setCorreo      (rs.getString ("correo"));
-        u.setTipoCliente (rs.getString ("tipo_cliente"));
-        u.setActivo      (rs.getBoolean("activo"));
-        // password no se mapea — nunca sale del DAO
-        // fecha_registro → LocalDateTime
-        Timestamp ts = rs.getTimestamp("fecha_registro");
-        if (ts != null) {
-            u.setFechaRegistro(ts.toLocalDateTime());
-        }
-        return u;
-    }
-
     public boolean eliminarUsuario(int idUsuario) throws SQLException {
-        // 1. Borrar registros de entrada/salida asociados a ese usuario
-        String sqlRegistros = "DELETE FROM registro WHERE id_usuario = ?";
-        // 2. Borrar el usuario
-        String sqlUsuario = "DELETE FROM usuario WHERE id = ?";
+        String sqlRegistros = "UPDATE registro " +
+                "SET hora_salida = CURRENT_TIMESTAMP, " +
+                "    id_usuario_salida = id_usuario_entrada " +
+                "WHERE id_usuario_entrada = ? " +
+                "AND hora_salida IS NULL";
+
+        // 2. Desactivar el usuario
+        String sqlUsuario = "UPDATE usuario " +
+                "SET activo = FALSE " +
+                "WHERE id = ?";
 
         try (Connection conn = DatabaseConnection.getConnection()) {
             conn.setAutoCommit(false); // Iniciamos transacción segura
             try (PreparedStatement psReg = conn.prepareStatement(sqlRegistros);
                  PreparedStatement psUser = conn.prepareStatement(sqlUsuario)) {
 
-                // Primero quitamos los registros (placas/movimientos)
+                //Cerrar entradas activas
                 psReg.setInt(1, idUsuario);
                 psReg.executeUpdate();
 
-                // Luego quitamos al usuario
+                // Desactivar usuario
                 psUser.setInt(1, idUsuario);
                 int filasAfectadas = psUser.executeUpdate();
 
@@ -255,5 +239,25 @@ public class UsuarioDAO {
                 throw e;
             }
         }
+    }
+
+    // ═══════════════════════════════════════════════
+
+    private Usuario mapear(ResultSet rs) throws SQLException {
+        Usuario u = new Usuario();
+        u.setId          (rs.getInt    ("id"));
+        u.setNombre      (rs.getString ("nombre"));
+        u.setRol         (Usuario.Rol.valueOf(rs.getString ("rol")));
+        u.setDocumento   (rs.getString ("documento"));
+        u.setTelefono    (rs.getString ("telefono"));
+        u.setCorreo      (rs.getString ("correo"));
+        u.setTipoCliente (Usuario.TipoCliente.valueOf(rs.getString ("tipo_cliente")));
+        u.setActivo      (rs.getBoolean("activo"));
+
+        Timestamp ts = rs.getTimestamp("fecha_registro");
+        if (ts != null) {
+            u.setFechaRegistro(ts.toLocalDateTime());
+        }
+        return u;
     }
 }

@@ -1,0 +1,43 @@
+# === 1. SEGURIDAD (CRÍTICO) ===
+config.properties
+.env
+*.log
+
+# === 2. COMPILACIÓN Y SALIDA ===
+target/
+build/
+out/
+*.class
+*.jar
+*.war
+*.ear
+
+# === 3. CONFIGURACIÓN DEL IDE (IntelliJ IDEA) ===
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# === 4. CONFIGURACIÓN DEL IDE (NetBeans) ===
+nbproject/private/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# === 5. CONFIGURACIÓN DEL IDE (Eclipse) ===
+.metadata/
+bin/
+tmp/
+.classpath
+.project
+.settings/
+
+# Archivos temporales de Windows y Mac
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Archivos de logs
+*.log

@@ -150,20 +150,27 @@ public class PanelEntradas extends BasePanel {
     public void actualizarTabla() {
         modelo.setRowCount(0);
         String busqueda = txtBuscar.getText().trim().toLowerCase();
-        String tipoSel = cbTipo.getSelectedItem().toString();
-        String estadoSel = cbEstado.getSelectedItem().toString();
+        String tipoSel = cbTipo.getSelectedItem().toString(); // "Tipo", "Mensual", "Visitante"
+        String estadoSel = cbEstado.getSelectedItem().toString(); // "Estado", "Activo", "Inactivo"
 
         try {
-            List<Usuario> lista = service.buscarUsuarios(busqueda);
+            // Traemos la lista desde el service (que ya trae a todos del DAO)
+            List<Usuario> lista = service.buscarUsuarios("");
             int activos = 0;
 
             for (Usuario u : lista) {
+                // Lógica de coincidencia de Tipo
                 boolean matchTipo = tipoSel.equals("Tipo") ||
                         tipoSel.equalsIgnoreCase(String.valueOf(u.getTipoCliente()));
+
+                // Lógica de coincidencia de Estado (ACTUALIZADA)
                 boolean matchEstado = estadoSel.equals("Estado") ||
                         estadoSel.equalsIgnoreCase(u.isActivo() ? "Activo" : "Inactivo");
+                boolean coincide = busqueda.isEmpty() ||
+                        u.getNombre().toLowerCase().contains(busqueda) ||
+                        u.getDocumento().contains(busqueda);
 
-                if (matchTipo && matchEstado) {
+                if (matchTipo && matchEstado && coincide) {
                     if (u.isActivo()) activos++;
 
                     String placa = service.obtenerPlacaPorUsuario(u.getId());
@@ -174,22 +181,22 @@ public class PanelEntradas extends BasePanel {
                             u.getTipoCliente(),
                             u.getTelefono() != null ? u.getTelefono() : "---",
                             placa != null ? placa : "---",
-                            u.isActivo() ? "Activo" : "Inactivo",
+                            u.isActivo() ? "Activo" : "Inactivo", // Mostrará el texto según el booleano
                             "Editar"
                     });
                 }
             }
 
-            // Actualizar contadores
-            if (lblActivosValor != null) lblActivosValor.setText(String.valueOf(activos));
-            if (lblTotalValor != null) lblTotalValor.setText(String.valueOf(lista.size()));
+            // Actualizar los labels de conteo en la parte superior
+            lblActivosValor.setText(String.valueOf(activos));
+            lblTotalValor.setText(String.valueOf(lista.size()));
+            tabla.revalidate();
+            tabla.repaint();
 
         } catch (Exception e) {
             e.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Error al cargar usuarios");
         }
     }
-
     /**
      * Crea un indicador visual de estadísticas (Activos / Total)
      */
@@ -266,7 +273,13 @@ public class PanelEntradas extends BasePanel {
                             panelDestino.cargarUsuario(seleccionado);
                             // 4. Cambiamos la vista (Usa el nombre exacto que definiste en tu Main/Router)
                             cardLayout.show(panelContenedor, "PANTALLA_SALIDA");
+                            Window w = SwingUtilities.getWindowAncestor(panelContenedor);
+                            if (w instanceof DashboardFrame) {
+                                // Usamos el método que creamos en el paso anterior
+                                ((DashboardFrame) w).marcarBotonPorPantalla("PANTALLA_SALIDA");
+                            }
                             return;
+
                         }
                     }
                 }

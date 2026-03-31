@@ -145,6 +145,7 @@ public class PanelSalidas extends BasePanel {
         };
         btnBuscar.addActionListener(e -> buscarUsuario());
         btnGuardar.addActionListener(e -> guardarCambios());
+
         btnCancelar.addActionListener(e -> limpiarCampos());
 
         return panel;
@@ -173,7 +174,6 @@ public class PanelSalidas extends BasePanel {
         return panelDerecho;
     }
 
-
     // === AJUSTE PANEL CONFIRMACIÓN ===
     private JPanel crearPanelConfirmacion() {
         panelConfirmacion = new JPanel(new GridBagLayout());
@@ -193,7 +193,7 @@ public class PanelSalidas extends BasePanel {
         g.gridx = 0;
 
         // Titulo central
-        JLabel titulo = new JLabel("¿Confirmar desactivacion?", SwingConstants.CENTER);
+        JLabel titulo = new JLabel("¿CONFIRMAR ELIMINACIÓN?", SwingConstants.CENTER);
         titulo.setFont(new Font("Arial", Font.BOLD, 14));
         g.gridy = 0; g.insets = new Insets(0, 0, 10, 0);
         panel.add(titulo, g);
@@ -233,12 +233,12 @@ public class PanelSalidas extends BasePanel {
         pBotones.setOpaque(false);
 
         JButton btnCan = botonSecundario("Cancelar", 100);
-        btnCan.addActionListener(e -> panelConfirmacion.setVisible(false)); // Evento cancelar
-        JButton btnDes = new JButton("Si, desactivar");
+        btnCan.addActionListener(e -> panelConfirmacion.setVisible(false));
+
+        JButton btnDes = new JButton("Si, ELIMINAR");
         btnDes.setForeground(new Color(180, 0, 0)); // Rojo oscuro
         btnDes.setBackground(Color.WHITE);
         btnDes.setFont(new Font("Arial", Font.BOLD, 12));
-
         btnDes.addActionListener(e -> confirmarDesactivacion());
 
         pBotones.add(btnCan);
@@ -344,31 +344,30 @@ public class PanelSalidas extends BasePanel {
         }
 
         try {
-
+            // 1. Guardar en la Base de Datos (Tu código actual)
             service.actualizarUsuario(idUsuarioActual,
                     txtTelefono.getText().trim(),
                     txtEmail.getText().trim(),
                     cbEstado.getSelectedItem().toString());
 
-            service.finalizarSalidaPorPlacaParaUsuario(idUsuarioActual);
-
-            cargarVehiculosAsociados(idUsuarioActual);
+            // 2. REFRESCAR: Invoca este método que ya está en tu BasePanel
+            // Este método buscará el PanelEntradas y ejecutará su actualización.
             refrescarOtrosPaneles();
 
+            // 3. Feedback y Navegación (Tu código actual)
+            cardLayout.show(panelContenedor, "PANTALLA_ENTRADA");
+            Window w = SwingUtilities.getWindowAncestor(this);
+            if (w instanceof DashboardFrame) {
+                // Le decimos que marque "PANTALLA_ENTRADA" para que el botón de Entradas se ponga azul
+                ((DashboardFrame) w).marcarBotonPorPantalla("PANTALLA_ENTRADA");
+            }
             JOptionPane.showMessageDialog(this, "Cambios guardados correctamente.");
+
+
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error al guardar: " + e.getMessage());
+            e.printStackTrace();
         }
     }
-
-private void mostrarConfirmacionDesactivacion() {
-    if (idUsuarioActual == -1) {
-        JOptionPane.showMessageDialog(this, "Primero busque un usuario.");
-        return;
-    }
-    lblNombreConfirmar.setText("Usuario: " + txtNombre.getText().trim());
-    panelConfirmacion.setVisible(true);
-}
 
     /**
      * Confirma y ejecuta la desactivación del usuario.
@@ -377,13 +376,21 @@ private void mostrarConfirmacionDesactivacion() {
         if (idUsuarioActual == -1) return;
 
         try {
+            // Usa el método que ya dispara el mensaje de éxito que viste en la imagen
             service.desactivarUsuario(idUsuarioActual);
-            JOptionPane.showMessageDialog(this,
-                    "Usuario desactivado correctamente.\nPuede revertirse desde el panel de usuarios.");
 
-           // panelConfirmacion.setVisible(false);
+            JOptionPane.showMessageDialog(this,
+                    "Usuario desactivado correctamente.");
+
+            // Importante: No olvides refrescar para que el usuario "desaparezca" de la tabla actual
             refrescarOtrosPaneles();
             limpiarCampos();
+            cardLayout.show(panelContenedor, "PANTALLA_ENTRADA");
+            // 2. Sincronizas el Menú Lateral
+            Window w = SwingUtilities.getWindowAncestor(this);
+            if (w instanceof DashboardFrame) {
+                ((DashboardFrame) w).marcarBotonPorPantalla("PANTALLA_ENTRADA");
+            }
 
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error al desactivar usuario: " + e.getMessage());
@@ -411,12 +418,27 @@ private void mostrarConfirmacionDesactivacion() {
     }
 
     /**
-     * Refresca PanelEntradas y PanelCeldas después de
-     * guardar o desactivar
+     * Se encarga de notificar a los demás paneles que un usuario ya no está activo.
      */
+    @Override
     protected void refrescarOtrosPaneles() {
-        refrescarPanelEntradas();   // método heredado de
-        refrescarPanelCeldas();     // método heredado de
+        // 1. Refresca la tabla de Entradas (Heredado de BasePanel)
+        refrescarPanelEntradas();
+
+        // 2. Refresca el mapa de celdas (Heredado de BasePanel)
+        refrescarPanelCeldas();
+
+        // 3. Notificar a Pagos para que quite la placa del combo
+        PanelPagos pPagos = buscarComponente(panelContenedor, PanelPagos.class);
+        if (pPagos != null) {
+            pPagos.actualizarPlacasActivas();
+        }
+
+        // 4. Notificar a Gestión de Celdas para que quite al usuario de la lista de asignación
+        PanelConsultaCeldas pCeldas = buscarComponente(panelContenedor, PanelConsultaCeldas.class);
+        if (pCeldas != null) {
+            pCeldas.actualizarCombos();
+        }
     }
 
     /**
@@ -432,10 +454,5 @@ private void mostrarConfirmacionDesactivacion() {
         lblEstadoCirculo.setForeground(Color.GREEN);
         modeloVehiculos.setRowCount(0);
         panelConfirmacion.setVisible(false);
-    }
-
-    @Override
-    public JLabel etiqueta(String texto) {
-        return super.etiqueta(texto);
     }
 }

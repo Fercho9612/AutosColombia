@@ -46,7 +46,7 @@ public class CeldaDAO {
     }
 
     /**
-     * Registro simple (CONSULTA CELDA.jpg)
+     * Registro simple
      */
     public boolean registrar(int id, String tipo) throws SQLException {
         String sql = "INSERT INTO celda (id, tipo, disponible) VALUES (?, ?, TRUE)";
@@ -54,6 +54,21 @@ public class CeldaDAO {
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
             ps.setString(2, tipo.toUpperCase());
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * Actualiza el tipo y la disponibilidad de una celda existente.
+     * Permite liberar (TRUE) o ocupar (FALSE) la celda.
+     */
+    public boolean actualizarEstadoCompleto(int id, String tipo, boolean disponible) throws SQLException {
+        String sql = "UPDATE celda SET tipo = ?, disponible = ? WHERE id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, tipo.toUpperCase());
+            ps.setBoolean(2, disponible);
+            ps.setInt(3, id);
             return ps.executeUpdate() > 0;
         }
     }

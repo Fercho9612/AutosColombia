@@ -218,4 +218,24 @@ public class DashboardFrame extends JFrame {
             new LoginFrame().setVisible(true);
         }
     }
+    /**
+     * Permite a los paneles internos (hijos) cambiar el resaltado del menú
+     * cuando ocurre una redirección automática.
+     */
+    public void marcarBotonPorPantalla(String nombrePantalla) {
+        JButton botonADestacar = null;
+
+        switch (nombrePantalla) {
+            case "PANTALLA_REGISTRO":        botonADestacar = botonesMenu[0]; break;
+            case "PANTALLA_ENTRADA":         botonADestacar = botonesMenu[1]; break;
+            case "PANTALLA_SALIDA":          botonADestacar = botonesMenu[2]; break;
+            case "PANTALLA_CELDAS":          botonADestacar = botonesMenu[3]; break;
+            case "PANTALLA_GESTION_CELDAS":  botonADestacar = botonesMenu[4]; break;
+            case "PANTALLA_PAGOS":           botonADestacar = botonesMenu[5]; break;
+        }
+
+        if (botonADestacar != null) {
+            actualizarEstadoMenu(botonADestacar);
+        }
+    }
 }

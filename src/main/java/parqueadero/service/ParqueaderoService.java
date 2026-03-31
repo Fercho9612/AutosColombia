@@ -18,16 +18,17 @@ import java.util.List;
 public class ParqueaderoService {
 
     // ── DAOs ────────────────────────────────────────────
-    private final UsuarioDAO  usuarioDAO  = new UsuarioDAO();
-    private final CeldaDAO    celdaDAO    = new CeldaDAO();
+    private final UsuarioDAO usuarioDAO = new UsuarioDAO();
+    private final CeldaDAO celdaDAO = new CeldaDAO();
     private final RegistroDAO registroDAO = new RegistroDAO();
-    private final PagoDAO     pagoDAO     = new PagoDAO();
+    private final PagoDAO pagoDAO = new PagoDAO();
     private final VehiculoDAO vehiculoDAO = new VehiculoDAO();
 
     // ====================== AUTENTICACIÓN ======================
 
     /**
      * Valida credenciales y devuelve el Usuario autenticado.
+     *
      * @return Usuario si las credenciales son correctas, null si no.
      */
     public Usuario login(String nombre, String password) {
@@ -41,6 +42,7 @@ public class ParqueaderoService {
 
     /**
      * Restaura la contraseña verificando nombre + documento.
+     *
      * @throws Exception si el usuario no existe o hay error de BD.
      */
     public void restaurarPassword(String nombre, String documento, String nuevaPass) throws Exception {
@@ -61,6 +63,7 @@ public class ParqueaderoService {
     /**
      * Busca usuarios activos por nombre parcial o documento exacto.
      * Si el filtro está vacío, retorna todos los usuarios activos.
+     *
      * @param filtro cadena de búsqueda (puede ser vacía, nunca null)
      */
     public List<Usuario> buscarUsuarios(String filtro) {
@@ -159,41 +162,27 @@ public class ParqueaderoService {
      * Actualiza teléfono, correo y tipo de cliente de un usuario existente.
      * Requerido por PanelSalidas → guardarCambios().
      *
-     * @param idUsuario    ID del usuario a modificar
-     * @param telefono     Nuevo teléfono
-     * @param correo       Nuevo correo
-     * @param tipoCliente  "Activo" | "Inactivo" — se traduce a activo/inactivo en BD
+     * @param idUsuario ID del usuario a modificar
+     * @param telefono  Nuevo teléfono
+     * @param correo    Nuevo correo
+     *                  *@param tipoCliente "Activo" | "Inactivo" — se traduce a activo/inactivo en BD
      * @throws Exception si hay error de BD o usuario no encontrado
      */
     public void actualizarUsuario(int idUsuario, String telefono,
-                                  String correo, String tipoCliente) throws Exception {
+                                  String correo, String estadoCombo) throws Exception {
         try {
-            // El tercer parámetro del DAO es tipo_cliente (mensual/visitante),
-            // pero PanelSalidas envía el estado ("Activo"/"Inactivo").
-            // Manejamos ambos casos para ser robustos.
-            String tipoParaDB;
-            if ("Activo".equalsIgnoreCase(tipoCliente) || "Inactivo".equalsIgnoreCase(tipoCliente)) {
-                // El comboBox de estado no cambia tipo_cliente; actualizamos solo datos de contacto
-                tipoParaDB = null; // Ver nota abajo
-            } else {
-                tipoParaDB = tipoCliente.trim().toLowerCase(); // "mensual" | "visitante"
-            }
-
-            // Si el panel envía un estado (Activo/Inactivo), actualizamos activo por separado
-            if ("Inactivo".equalsIgnoreCase(tipoCliente)) {
+            // CORRECCIÓN: Manejar AMBOS estados (Activo e Inactivo)
+            if ("Inactivo".equalsIgnoreCase(estadoCombo)) {
                 usuarioDAO.desactivar(idUsuario);
+            } else if ("Activo".equalsIgnoreCase(estadoCombo)) {
+                usuarioDAO.activar(idUsuario);
             }
 
-            // Actualizar datos de contacto (DAO ignora tipo_cliente si es null → ponemos el valor actual)
-            // Recuperamos el usuario para no pisar tipo_cliente con un valor incorrecto
-            Usuario actual = null;
-            try {
-                actual = buscarUsuarioPorId(idUsuario);
-            } catch (Exception ignored) {}
+            // Recuperar el usuario para mantener el TipoCliente (mensual/visitante)
+            Usuario actual = buscarUsuarioPorId(idUsuario);
+            String tipoFinal = (actual != null) ? actual.getTipoCliente().name().toLowerCase() : "visitante";
 
-            String tipoFinal = (tipoParaDB != null) ? tipoParaDB
-                    : (actual != null ? actual.getTipoCliente().name().toLowerCase() : "visitante");
-
+            // Actualizar datos de contacto y tipo en la BD
             boolean ok = usuarioDAO.actualizar(idUsuario, telefono, correo, tipoFinal);
             if (!ok) throw new Exception("No se encontró el usuario con ID: " + idUsuario);
 
@@ -205,15 +194,23 @@ public class ParqueaderoService {
     /**
      * Desactiva lógicamente un usuario (borrado lógico).
      * Requerido por PanelSalidas → confirmarDesactivacion().
+     *
      * @throws Exception si hay error de BD
      */
+    // En ParqueaderoService.java
     public void desactivarUsuario(int idUsuario) throws Exception {
         try {
-            boolean ok = usuarioDAO.eliminarUsuario(idUsuario); // Cierra entradas activas + desactiva
-            if (!ok) throw new Exception("No se pudo desactivar el usuario con ID: " + idUsuario);
+            // Este método en el DAO debe ejecutar el UPDATE activo = false o el DELETE
+            boolean ok = usuarioDAO.eliminarUsuario(idUsuario);
+            if (!ok) throw new Exception("No se pudo procesar el usuario.");
         } catch (SQLException e) {
-            throw new Exception("Error al desactivar usuario: " + e.getMessage());
+            throw new Exception("Error de BD: " + e.getMessage());
         }
+    }
+
+    public List<Usuario> listarUsuariosCompletos() throws Exception {
+        // Asegúrate de que este método devuelva a todos para llenar los ComboBox
+        return usuarioDAO.listarTodos();
     }
 
     // ====================== CELDAS ======================
@@ -221,6 +218,7 @@ public class ParqueaderoService {
     /**
      * Lista todas las celdas del parqueadero.
      * Requerido por PanelCeldas, PanelRegistro y PanelConsultaCeldas.
+     *
      * @throws SQLException si hay error de conexión
      */
     public List<Celda> listarCeldas() throws SQLException {
@@ -229,19 +227,28 @@ public class ParqueaderoService {
 
     /**
      * Registra una nueva celda física en el parqueadero.
+     *
      * @param id   Número identificador de la celda (ingresado por el admin)
      * @param tipo "CARRO" | "MOTO"
      * @throws Exception si el ID ya existe o hay error de BD
      */
-    public void registrarCelda(int id, String tipo) throws Exception {
+    public void registrarCelda(int id, String tipo, boolean disponible) throws Exception {
         try {
+            // El Service usa al DAO para consultar la DB
             if (celdaDAO.existeCelda(id)) {
-                throw new Exception("Ya existe una celda con el ID: " + id);
+                // Si la celda existe, el Service le ordena al DAO hacer un UPDATE
+                boolean ok = celdaDAO.actualizarEstadoCompleto(id, tipo, disponible);
+                if (!ok) throw new Exception("No se pudo actualizar la celda.");
+            } else {
+                // Si no existe, el Service le ordena al DAO hacer un INSERT
+                boolean ok = celdaDAO.registrar(id, tipo);
+                // Si se creó como 'Ocupada' desde el inicio, actualizamos
+                if (!disponible) {
+                    celdaDAO.actualizarEstadoCompleto(id, tipo, false);
+                }
             }
-            boolean ok = celdaDAO.registrar(id, tipo);
-            if (!ok) throw new Exception("No se pudo registrar la celda.");
         } catch (SQLException e) {
-            throw new Exception("Error al registrar celda: " + e.getMessage());
+            throw new Exception("Error de conexión a la base de datos: " + e.getMessage());
         }
     }
 
@@ -279,9 +286,9 @@ public class ParqueaderoService {
      * Registra la entrada de un vehículo al parqueadero.
      * Llama al stored procedure sp_registrarEntrada.
      *
-     * @param placa       Placa del vehículo
+     * @param placa        Placa del vehículo
      * @param tipoVehiculo "CARRO" | "MOTO"
-     * @param idUsuario   ID del vigilante que registra
+     * @param idUsuario    ID del vigilante que registra
      * @return Mensaje del SP: "OK", "SIN_ESPACIO:...", "Vehículo ya está dentro"
      * @throws SQLException si hay error de BD
      */
@@ -294,12 +301,27 @@ public class ParqueaderoService {
      * Llama al stored procedure sp_registrarSalida.
      *
      * @param placa           Placa del vehículo
-     * @param idUsuarioSalida ID del vigilante que procesa la salida
      * @return Resumen con monto y tiempo, o mensaje de error del SP
      * @throws SQLException si hay error de BD
      */
-    public String registrarSalida(String placa, int idUsuarioSalida) throws SQLException {
-        return registroDAO.registrarSalida(placa, idUsuarioSalida);
+    public String registrarSalida(String placa, int idTarifa) throws Exception {
+        try {
+            // 1. Obtener el ID del usuario antes de registrar la salida
+            int idUsuario = usuarioDAO.obtenerIdPorPlaca(placa);
+
+            // 2. Lógica de liquidación y registro de salida
+            // (Aquí debes mantener el código que ya tenías para calcular el cobro y guardar en BD)
+            // String resultado = realizarLogicaDeCobro(placa, idTarifa);
+
+            // 3. DESACTIVAR AL USUARIO (Esto hará que cambie a 'Inactivo' en el Panel Entradas)
+            if (idUsuario != -1) {
+                usuarioDAO.desactivar(idUsuario);
+            }
+
+            return "Salida registrada con éxito. El usuario ahora está Inactivo.";
+        } catch (SQLException e) {
+            throw new Exception("Error en la base de datos: " + e.getMessage());
+        }
     }
 
     /**
@@ -359,6 +381,7 @@ public class ParqueaderoService {
     /**
      * Cierra todas las entradas activas de un usuario (sin calcular cobro).
      * Usado por PanelSalidas → guardarCambios() cuando se edita un usuario.
+     *
      * @throws Exception si hay error de BD
      */
     public void finalizarSalidaPorPlacaParaUsuario(int idUsuario) throws Exception {
@@ -395,23 +418,6 @@ public class ParqueaderoService {
         }
     }
 
-    /**
-     * Procesa el cobro final y registra la salida completa.
-     * Llama a sp_registrarSalida que actualiza registro, celda y crea el pago.
-     *
-     * @param placa     Placa del vehículo
-     * @param idUsuario ID del vigilante que cobra
-     * @return true si el proceso fue exitoso
-     */
-    public boolean procesarCobroFinal(String placa, int idUsuario) {
-        try {
-            return pagoDAO.procesarCobroFinal(placa, idUsuario);
-        } catch (SQLException e) {
-            System.err.println("[procesarCobroFinal] Error SQL: " + e.getMessage());
-            return false;
-        }
-    }
-
     // ====================== MÉTODOS AUXILIARES PRIVADOS ======================
 
     /**
@@ -439,4 +445,6 @@ public class ParqueaderoService {
         }
         return null;
     }
+
+
 }

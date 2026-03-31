@@ -95,10 +95,15 @@ public class PanelCeldas extends BasePanel {
 
         // Botón Gestionar usando método de BasePanel
         JButton btnGestion = botonPrimario("+ Gestionar Celdas", 160);
-        btnGestion.setBackground(AZUL_BOTON);
+        btnGestion.setBackground(AZUL_BTN);
         btnGestion.setForeground(Color.WHITE);
         btnGestion.setPreferredSize(new Dimension(160, 35));
         btnGestion.addActionListener(e -> cardLayout.show(panelContenedor, "PANTALLA_GESTION_CELDAS"));
+
+        Window w = SwingUtilities.getWindowAncestor(this);
+        if (w instanceof DashboardFrame) {
+            ((DashboardFrame) w).marcarBotonPorPantalla("PANTALLA_GESTION_CELDAS");
+        }
 
         barraHerramientas.add(new JLabel("Filtrar:"));
         barraHerramientas.add(cbTipos);
@@ -159,44 +164,49 @@ public class PanelCeldas extends BasePanel {
      */
 
     public void actualizarMapa() {
-        gridCeldas.removeAll();
-        int contadorOcupadas = 0;
-
+        gridCeldas.removeAll(); // Limpiamos para redibujar con datos nuevos de la BD
 
         try {
+            // Consultamos la BD a través del servicio
             List<Celda> listaCeldas = service.listarCeldas();
-            String tipoFiltro = cbTipos.getSelectedItem().toString();
-            String estadoFiltro = cbEstados.getSelectedItem().toString();
-            int disponibles = 0;
+
             int ocupadas = 0;
+            int disponibles = 0;
 
             for (Celda c : listaCeldas) {
+                // Contamos según el estado real en BD
+                if (c.isDisponible()) disponibles++;
+                else ocupadas++;
+
+                // Aplicamos filtros visuales sin alterar la BD
+                String tipoFiltro = cbTipos.getSelectedItem().toString();
+                String estadoFiltro = cbEstados.getSelectedItem().toString();
+
                 boolean matchTipo = tipoFiltro.equals("Todos los tipos") ||
-                        tipoFiltro.equalsIgnoreCase(c.getTipo().toString());
+                        tipoFiltro.equalsIgnoreCase(c.getTipo().name());
+
                 boolean matchEstado = estadoFiltro.equals("Todos los estados") ||
                         (estadoFiltro.equals("Disponible") && c.isDisponible()) ||
                         (estadoFiltro.equals("Ocupado") && !c.isDisponible());
 
                 if (matchTipo && matchEstado) {
-                    gridCeldas.add(crearBotonCelda(c));
+                    gridCeldas.add(crearBotonCelda(c)); // El botón recibirá el color correcto
                 }
-
-                if (!c.isDisponible()) contadorOcupadas++;
-                else ocupadas++;
             }
 
-            // Actualizar contadores
+            // Actualizamos los indicadores con los valores de la BD
             lblTotal.setText("Total Celdas: " + listaCeldas.size());
-            lblDisponibles.setText("Disponibles: " + (listaCeldas.size() - contadorOcupadas));
-            lblOcupadas.setText("Ocupadas: " + contadorOcupadas);
+            lblDisponibles.setText("Disponibles: " + disponibles);
+            lblOcupadas.setText("Ocupadas: " + ocupadas);
 
             gridCeldas.revalidate();
             gridCeldas.repaint();
 
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error al cargar el mapa de celdas: " + e.getMessage());
+            System.err.println("Error al sincronizar con BD: " + e.getMessage());
         }
     }
+
 
     /**
      * Crea un botón estilizado que representa visualmente una celda individual.
@@ -204,32 +214,53 @@ public class PanelCeldas extends BasePanel {
      * * @param celda El objeto Celda con la información a mostrar.
      * @return Un JButton configurado con el ID y tipo de la celda.
      */
+    /**
+     * Crea un botón estilizado que representa visualmente una celda individual.
+     * Al hacer clic, envía el ID al panel de gestión y cambia la vista.
+     */
     private JButton crearBotonCelda(Celda celda) {
-        String html = "<html><center><b>C" + String.format("%02d", celda.getId()) + "</b><br>" +
-                "<font size='3'>" + celda.getTipo() + "</font></center></html>";
+        // Formato visual: C01, C02, etc.
+        String idVisual = "C" + String.format("%02d", celda.getId());
+        String html = "<html><center><b>" + idVisual + "</b><br>" +
+                "<font size='2'>" + celda.getTipo() + "</font></center></html>";
 
         JButton btn = new JButton(html);
         btn.setFont(new Font("Arial", Font.PLAIN, 12));
         btn.setFocusPainted(false);
-        btn.setBorder(new LineBorder(new Color(180, 180, 180), 1, true));
-        btn.setPreferredSize(new Dimension(90, 70));
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR)); // Cursor de mano para indicar que es cliqueable
+        btn.setBorder(new LineBorder(Color.WHITE, 2, true));
+        btn.setPreferredSize(new Dimension(100, 80));
 
+        // Colores según disponibilidad
         if (celda.isDisponible()) {
             btn.setBackground(VERDE_DISPONIBLE);
             btn.setForeground(Color.WHITE);
-            //btn.setBorder(new LineBorder(VERDE_DISPONIBLE.darker(), 1));
         } else {
             btn.setBackground(ROJO_OCUPADO);
             btn.setForeground(Color.WHITE);
-            //btn.setBorder(new LineBorder(ROJO_OCUPADO.darker(), 1));
         }
 
-        // Acción al clic (opcional: mostrar info o liberar)
+        // ACCIÓN AL HACER CLIC: Llenar el identificador y saltar a la pantalla de gestión
+        // Dentro de crearBotonCelda en PanelCeldas.java
         btn.addActionListener(e -> {
-            String info = "Celda: C" + celda.getId() + "\n" +
-                    "Tipo: " + celda.getTipo() + "\n" +
-                    "Estado: " + (celda.isDisponible() ? "Disponible" : "Ocupada");
-            JOptionPane.showMessageDialog(this, info, "Detalle de Celda", JOptionPane.INFORMATION_MESSAGE);
+            // Buscamos el panel de consulta entre los hijos del contenedor
+            for (Component comp : panelContenedor.getComponents()) {
+                if (comp instanceof PanelConsultaCeldas) {
+                    PanelConsultaCeldas pConsulta = (PanelConsultaCeldas) comp;
+
+                    // Le pasamos el ID de la celda cliqueada
+                    pConsulta.cargarCeldaDesdeMapa(celda.getId());
+
+                    // Cambiamos a la pantalla de gestión/consulta
+                    cardLayout.show(panelContenedor, "PANTALLA_GESTION_CELDAS");
+                    // 2. Sincronizas el Menú Lateral
+                    Window w = SwingUtilities.getWindowAncestor(this);
+                    if (w instanceof DashboardFrame) {
+                        ((DashboardFrame) w).marcarBotonPorPantalla("PANTALLA_GESTION_CELDAS");
+                    }
+                    break;
+                }
+            }
         });
 
         return btn;
@@ -251,13 +282,11 @@ public class PanelCeldas extends BasePanel {
         return lbl;
     }
 
-    /**
-     * Crea ítem de leyenda con círculo de color
-     */
-    private JLabel crearItemLeyenda(String texto, Color color) {
-        JLabel lbl = new JLabel("● " + texto);
-        lbl.setForeground(color);
-        lbl.setFont(new Font("Arial", Font.BOLD, 14));
-        return lbl;
+
+    @Override
+    public void addNotify() {
+        super.addNotify();
+        // Se ejecuta automáticamente cada vez que el panel se muestra
+        actualizarMapa();
     }
 }

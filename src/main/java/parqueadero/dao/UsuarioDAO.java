@@ -128,19 +128,23 @@ public class UsuarioDAO {
      * @return lista de usuarios que coinciden
      * @throws SQLException si hay error en BD
      */
-    public List<Usuario> buscarPorCriterio(String criterio)
-            throws SQLException {
-        if (criterio == null) criterio = "NO ENCONTRADO";
+    public List<Usuario> buscarPorCriterio(String criterio) throws SQLException {
+        if (criterio == null) criterio = ""; // Cambiado para permitir búsquedas vacías (ver todos)
+
+        // Eliminamos "AND activo = TRUE" de la consulta
         String sql = "SELECT * FROM usuario " +
                 "WHERE (nombre LIKE ? OR documento = ?) " +
-                "AND activo = TRUE " + "AND nombre != 'admin'";
+                "AND nombre != 'admin'";
+
         List<Usuario> lista = new ArrayList<>();
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, "%" + criterio + "%");
             ps.setString(2, criterio);
             ResultSet rs = ps.executeQuery();
-            while (rs.next()) lista.add(mapear(rs));
+            while (rs.next()) {
+                lista.add(mapear(rs));
+            }
         }
         return lista;
     }
@@ -208,34 +212,28 @@ public class UsuarioDAO {
     }
 
     public boolean eliminarUsuario(int idUsuario) throws SQLException {
-        String sqlRegistros = "UPDATE registro " +
-                "SET hora_salida = CURRENT_TIMESTAMP, " +
-                "    id_usuario_salida = id_usuario_entrada " +
-                "WHERE id_usuario_entrada = ? " +
-                "AND hora_salida IS NULL";
-
-        // 2. Desactivar el usuario
-        String sqlUsuario = "UPDATE usuario " +
-                "SET activo = FALSE " +
-                "WHERE id = ?";
+        // 1. Sentencias SQL
+        String sqlRegistros = "DELETE FROM registro WHERE id_usuario_entrada = ? OR id_usuario_salida = ?";
+        String sqlUsuario = "DELETE FROM usuario WHERE id = ?";
 
         try (Connection conn = DatabaseConnection.getConnection()) {
-            conn.setAutoCommit(false); // Iniciamos transacción segura
+            conn.setAutoCommit(false); // Transacción segura
             try (PreparedStatement psReg = conn.prepareStatement(sqlRegistros);
                  PreparedStatement psUser = conn.prepareStatement(sqlUsuario)) {
 
-                //Cerrar entradas activas
+                // Borrar historial para evitar error de integridad
                 psReg.setInt(1, idUsuario);
+                psReg.setInt(2, idUsuario);
                 psReg.executeUpdate();
 
-                // Desactivar usuario
+                // Borrar usuario
                 psUser.setInt(1, idUsuario);
                 int filasAfectadas = psUser.executeUpdate();
 
-                conn.commit(); // Confirmamos los cambios en MySQL
+                conn.commit();
                 return filasAfectadas > 0;
             } catch (SQLException e) {
-                conn.rollback(); // Si algo falla, deshacemos todo
+                conn.rollback();
                 throw e;
             }
         }
@@ -260,4 +258,45 @@ public class UsuarioDAO {
         }
         return u;
     }
+
+    public List<Usuario> listarTodos() throws SQLException {
+        List<Usuario> usuarios = new ArrayList<>();
+        // CORRECCIÓN: 'usuario' en singular, tal como está en el resto de tu DAO
+        String sql = "SELECT id, nombre FROM usuario ORDER BY nombre ASC";
+
+        try (Connection con = DatabaseConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                Usuario u = new Usuario();
+                u.setId(rs.getInt("id"));
+                u.setNombre(rs.getString("nombre"));
+                usuarios.add(u);
+            }
+        }
+        return usuarios;
+    }
+    public boolean activar(int id) throws SQLException {
+        String sql = "UPDATE usuario SET activo = TRUE WHERE id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            return ps.executeUpdate() > 0;
+        }
+    }
+    public int obtenerIdPorPlaca(String placa) throws SQLException {
+        // Buscamos en la tabla de registros quién es el dueño de esa placa activa
+        String sql = "SELECT id_usuario_entrada FROM registro " +
+                "WHERE placa_vehiculo = ? AND hora_salida IS NULL " +
+                "ORDER BY hora_entrada DESC LIMIT 1";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, placa);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) return rs.getInt("id_usuario_entrada");
+        }
+        return -1;
+    }
+
 }

@@ -130,6 +130,7 @@ public class PanelRegistro extends BasePanel {
         });
 
     }
+
 //ACCIÓN REGISTRAR — lógica completa
 
     /**
@@ -181,18 +182,17 @@ public class PanelRegistro extends BasePanel {
                 // Aquí puedes llamar a un método para limpiar los campos, ej: limpiarFormulario();
                 limpiarCampos();
                 refrescarPanelEntradas();
+                refrescarOtrosPaneles();
+
                 // 6. Redirigir a ENTRADAS
                 cardLayout.show(panelContenedor, "PANTALLA_ENTRADA");
+                // 2. Sincronizas el Menú Lateral
+                Window w = SwingUtilities.getWindowAncestor(this);
+                if (w instanceof DashboardFrame) {
+                    ((DashboardFrame) w).marcarBotonPorPantalla("PANTALLA_ENTRADA");
+                }
 
             }
-            /*else {
-                JOptionPane.showMessageDialog(this,
-                        "No se pudo registrar el usuario.\n"
-                                + "Verifique que el documento o la placa\n"
-                                + "no estén ya registrados.",
-                        "Error en registro",
-                        JOptionPane.ERROR_MESSAGE);*/
-
 
         } catch (Exception e) {
             // Aquí es donde se soluciona el error de la imagen:

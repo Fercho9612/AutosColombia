@@ -2,9 +2,9 @@ package parqueadero.ui;
 
 import parqueadero.model.Usuario;
 import parqueadero.service.ParqueaderoService;
+
 import javax.swing.*;
 import java.awt.*;
-import java.math.BigDecimal;
 import java.util.List;
 
 public class PanelPagos extends BasePanel { // Hereda de BasePanel
@@ -99,25 +99,20 @@ public class PanelPagos extends BasePanel { // Hereda de BasePanel
 
         // 💰 CALCULAR (HU16)
         btnCalcular.addActionListener(e -> {
-            try {
-                String seleccion = (String) cbPlaca.getSelectedItem();
-                if (seleccion == null || seleccion.equals("Seleccione Placa...")) {
-                    JOptionPane.showMessageDialog(this, "Seleccione una placa activa");
-                    return;
-                }
-
-                String placa = seleccion.split(" - ")[0]; // Extrae solo la placa
-                BigDecimal valor = service.consultarLiquidacion(placa);
-
-                if (valor == null) {
-                    lblTotal.setText("Total: $0");
-                    JOptionPane.showMessageDialog(this, "No hay registro activo para esa placa");
-                    return;
-                }
-                lblTotal.setText("Total: $" + valor);
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Error al calcular: " + ex.getMessage());
+            String seleccion = (String) cbPlaca.getSelectedItem();
+            if (seleccion == null || seleccion.equals("Seleccione Placa...")) {
+                JOptionPane.showMessageDialog(this, "Seleccione un vehículo activo.");
+                return;
             }
+
+            // Extraer solo la placa (ej: "ABC123") de la cadena "ABC123 - NOMBRE"
+            String placa = seleccion.split(" - ")[0];
+
+            // Obtener cálculo real
+            java.math.BigDecimal total = service.consultarLiquidacion(placa);
+
+            // Mostrar en el label (image_68d7dc.png)
+            lblTotal.setText("Total: $" + String.format("%.2f", total));
         });
 
         // 💳 COBRAR = SALIDA (CORREGIDO CON TRY-CATCH Y HERENCIA)
@@ -135,6 +130,7 @@ public class PanelPagos extends BasePanel { // Hereda de BasePanel
                     "Método: " + metodo + "\n¿Confirmar pago y salida?",
                     "Confirmar", JOptionPane.YES_NO_OPTION);
 
+
             if (confirm == JOptionPane.YES_OPTION) {
                 try {
                     // 1. Ejecuta salida e Inactivación en BD
@@ -147,23 +143,55 @@ public class PanelPagos extends BasePanel { // Hereda de BasePanel
                     lblTotal.setText("Total: $0");
                     actualizarPlacasActivas();
 
+
                     JOptionPane.showMessageDialog(this, resultado);
+                    Window w = SwingUtilities.getWindowAncestor(this);
+                    if (w instanceof DashboardFrame) {
+                        ((DashboardFrame) w).marcarBotonPorPantalla("PANTALLA_ENTRADA");
+                    }
+
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage());
                 }
             }
         });
 
-        // ⚙️ TARIFAS
+        // --- BOTÓN GUARDAR TARIFAS ---
         btnGuardar.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, "Tarifas guardadas.");
+            try {
+                double carro = Double.parseDouble(txtPrecioCarro.getText());
+                double moto = Double.parseDouble(txtPrecioMoto.getText());
+
+                service.actualizarTarifasEnBD(carro, moto);
+                JOptionPane.showMessageDialog(this, "Tarifas actualizadas: Carro $" + carro + ", Moto $" + moto);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Error: Ingrese solo números en las tarifas.");
+            }
         });
 
-        // 📊 REPORTE (HU18)
-        btnReporte.addActionListener(e -> {
-            String reporte = "REPORTE DIARIO\n\nTotal recaudado: $50000";
-            JOptionPane.showMessageDialog(this, reporte);
+// --- BOTÓN CALCULAR ---
+        btnCalcular.addActionListener(e -> {
+            String seleccion = (String) cbPlaca.getSelectedItem();
+            if (seleccion == null || seleccion.equals("Seleccione Placa...")) return;
+
+            String placa = seleccion.split(" - ")[0];
+
+            // Aquí obtenemos el valor calculado por el SP (Minutos * Tarifa)
+            java.math.BigDecimal total = service.consultarLiquidacion(placa);
+            lblTotal.setText("Total: $" + total.toPlainString());
         });
+
+// --- EVENTO GENERAR REPORTE (HU18) ---
+        btnReporte.addActionListener(e -> {
+            try {
+                String reporte = service.generarReporteDiario();
+                JOptionPane.showMessageDialog(this, reporte, "Cierre de Caja", JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Error al generar reporte: " + ex.getMessage());
+            }
+        });
+
+
 
         actualizarPlacasActivas(); // Carga inicial
     }

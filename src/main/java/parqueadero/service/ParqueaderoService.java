@@ -400,23 +400,6 @@ public class ParqueaderoService {
         }
     }
 
-    // ====================== PAGOS / TARIFAS ======================
-
-    /**
-     * Consulta el monto a cobrar por el tiempo en parqueadero de un vehículo.
-     * Usa sp_calcularTarifa de MySQL.
-     *
-     * @param placa Placa del vehículo con entrada activa
-     * @return Monto calculado en pesos, 0 si no hay entrada activa
-     */
-    public java.math.BigDecimal consultarLiquidacion(String placa) {
-        try {
-            return pagoDAO.consultarLiquidacion(placa);
-        } catch (SQLException e) {
-            System.err.println("[consultarLiquidacion] Error SQL: " + e.getMessage());
-            return java.math.BigDecimal.ZERO;
-        }
-    }
 
     // ====================== MÉTODOS AUXILIARES PRIVADOS ======================
 
@@ -446,5 +429,121 @@ public class ParqueaderoService {
         return null;
     }
 
+    /**
+     * Liquida el cobro real: (Minutos transcurridos) * (Tarifa por minuto de la BD)
+     */
+    public java.math.BigDecimal consultarLiquidacion(String placa) {
+        // SQL para obtener la hora de entrada y el tipo de vehículo del registro ACTIVO
+        String sql = "SELECT r.hora_entrada, v.tipo FROM registro r " +
+                "JOIN vehiculo v ON r.placa_vehiculo = v.placa " +
+                "WHERE r.placa_vehiculo = ? AND r.hora_salida IS NULL";
 
+        try (java.sql.Connection conn = parqueadero.DataBaseConnection.DatabaseConnection.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, placa.toUpperCase().trim());
+            java.sql.ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                java.sql.Timestamp horaEntrada = rs.getTimestamp("hora_entrada");
+                String tipoVehiculo = rs.getString("tipo");
+
+                // 1. Calcular minutos transcurridos (mínimo 1 minuto)
+                long diferenciaMilis = System.currentTimeMillis() - horaEntrada.getTime();
+                long minutos = Math.max(1, diferenciaMilis / (1000 * 60));
+
+                // 2. Obtener la tarifa por minuto desde la tabla 'tarifa'
+                java.math.BigDecimal precioMinuto = obtenerPrecioTarifa(tipoVehiculo);
+
+                // 3. Resultado: minutos * tarifa
+                return precioMinuto.multiply(new java.math.BigDecimal(minutos));
+            }
+        } catch (java.sql.SQLException e) {
+            System.err.println("Error al calcular liquidación: " + e.getMessage());
+        }
+        return java.math.BigDecimal.ZERO;
+    }
+
+    // Método auxiliar para obtener el precio desde la tabla tarifa
+    private java.math.BigDecimal obtenerPrecioTarifa(String tipo) throws java.sql.SQLException {
+        String sql = "SELECT precio_por_minuto FROM tarifa WHERE tipo_vehiculo = ?";
+        try (java.sql.Connection conn = parqueadero.DataBaseConnection.DatabaseConnection.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, tipo);
+            java.sql.ResultSet rs = ps.executeQuery();
+            return rs.next() ? rs.getBigDecimal("precio_por_minuto") : java.math.BigDecimal.ZERO;
+        }
+    }
+
+    public void actualizarTarifasEnBD(double precioCarro, double precioMoto) throws Exception {
+        String sql = "INSERT INTO tarifa (tipo_vehiculo, precio_por_minuto) VALUES ('CARRO', ?), ('MOTO', ?) " +
+                "ON DUPLICATE KEY UPDATE precio_por_minuto = VALUES(precio_por_minuto)";
+
+        try (java.sql.Connection conn = parqueadero.DataBaseConnection.DatabaseConnection.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            // El script ejecutará dos inserts o actualizaciones según los valores de los JTextField
+            ps.setDouble(1, precioCarro);
+            ps.setDouble(2, precioMoto);
+            ps.executeUpdate();
+        } catch (java.sql.SQLException e) {
+            throw new Exception("Error al sincronizar tarifas: " + e.getMessage());
+        }
+    }
+
+    // En ParqueaderoService.java
+
+    /**
+     * Guarda las tarifas en la tabla 'tarifa' del SQL para que los SP funcionen.
+     */
+    public void guardarTarifasGlobales(double precioCarro, double precioMoto) throws Exception {
+        // Sincroniza con la tabla 'tarifa' de tu script SQL
+        String sql = "INSERT INTO tarifa (tipo_vehiculo, precio_por_minuto) VALUES ('CARRO', ?), ('MOTO', ?) " +
+                "ON DUPLICATE KEY UPDATE precio_por_minuto = VALUES(precio_por_minuto)";
+
+        try (java.sql.Connection conn = parqueadero.DataBaseConnection.DatabaseConnection.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            // Ejecución para ambos tipos
+            ps.setDouble(1, precioCarro);
+            ps.setDouble(2, precioMoto);
+            ps.executeUpdate();
+        } catch (java.sql.SQLException e) {
+            throw new Exception("Error al guardar tarifas: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Genera el reporte sumando la columna 'monto' de la tabla 'pago' del día actual.
+     */
+    public String generarReporteDiario() throws Exception {
+        String sql = "SELECT COUNT(*) as total_servicios, SUM(monto) as total_recaudado " +
+                "FROM pago WHERE DATE(fecha_pago) = CURDATE()";
+
+        try (java.sql.Connection conn = parqueadero.DataBaseConnection.DatabaseConnection.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql);
+             java.sql.ResultSet rs = ps.executeQuery()) {
+
+            if (rs.next()) {
+                int servicios = rs.getInt("total_servicios");
+                double recaudo = rs.getDouble("total_recaudado");
+                return String.format("REPORTE DEL DÍA\n\nServicios realizados: %d\nTotal Recaudado: $%.2f",
+                        servicios, recaudo);
+            }
+        }
+        return "No hay ventas registradas hoy.";
+    }
+    public String obtenerReporteFinanciero() throws Exception {
+        String sql = "SELECT SUM(monto) as total FROM pago WHERE DATE(fecha_pago) = CURDATE()";
+        try (java.sql.Connection conn = parqueadero.DataBaseConnection.DatabaseConnection.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql);
+             java.sql.ResultSet rs = ps.executeQuery()) {
+
+            if (rs.next()) {
+                double total = rs.getDouble("total");
+                return "Total Recaudado Hoy: $" + total;
+            }
+        }
+        return "No hay datos para hoy.";
+    }
 }

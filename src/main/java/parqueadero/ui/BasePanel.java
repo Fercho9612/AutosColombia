@@ -13,7 +13,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
 /**
- * Clase base para todos los paneles principales de la aplicación.
+ * Clase BASE "PADRE" para todos los paneles principales de la aplicación.
  * Contiene configuración común y métodos de utilidad.
  */
 public class BasePanel extends JPanel {
